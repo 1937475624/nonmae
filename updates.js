@@ -15,7 +15,6 @@ window.file_Mt_Gs={
 "damage_fire2.mp3":'audio/effect/damage_fire2.mp3',
 "damage_thunder.mp3":'audio/effect/damage_thunder.mp3',
 "damage_thunder2.mp3":'audio/effect/damage_thunder2.mp3',
-"MC_zuzhouzhiren.png":'image/card/MC_zuzhouzhiren.png',
 "mc_boss_zhaogao.jpg":'image/character/mc_boss_zhaogao.jpg',
 "mc_boss_molingzi.jpg":'image/character/mc_boss_molingzi.jpg',
 "mc_boss_mengtian.jpg":'image/character/mc_boss_mengtian.jpg',
