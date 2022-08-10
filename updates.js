@@ -8,9 +8,7 @@ window.file_Gs={
 };
 window.file_Mt_Gs={
 "loseHp.mp3":'audio/effect/loseHp.mp3',
-"recover.mp3":'audio/effect/recover.mp3',
-"hujia.mp3":"audio/effect/hujia.mp3",
-"hujia2.mp3":"audio/effect/hujia2.mp3",
+"recover.mp3":'audio/effect/recover.mp3',i
 "damage.mp3":'audio/effect/damage.mp3',
 "damage2.mp3":'audio/effect/damage2.mp3',
 "damage_fire.mp3":'audio/effect/damage_fire.mp3',
