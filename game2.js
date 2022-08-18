@@ -133,7 +133,7 @@ if(player.boss2) player.maxHp=Math.max(2,player.maxHp-2);
 player.hp=get.infoHp(hp);
 if(player.boss2) player.hp=Math.max(2,player.hp-2);
 };
-player.actionHistory=[{useCard:[],respond:[],skipped:[],lose:[],gain:[],sourceDamage:[],damage:[],custom:[]}];
+player.actionHistory=[{useCard:[],respond:[],skipped:[],lose:[],gain:[],sourceDamage:[],damage:[],custom:[],useSkill:[]}];
 if(game.zhu!=boss){
 game.zhu.identity="fan";
 game.zhu.setIdentity();
@@ -6488,7 +6488,7 @@ var noskill=player.awakenedSkills.slice(0);
 if(bool&&!game.mc_Bossed) game.mc_Bossed=true;
 player.uninit();
 player.init(name);
-player.actionHistory=[{useCard:[],respond:[],skipped:[],lose:[],gain:[],sourceDamage:[],damage:[],custom:[]}];
+player.actionHistory=[{useCard:[],respond:[],skipped:[],lose:[],gain:[],sourceDamage:[],damage:[],custom:[],useSkill:[]}];
 player.identity='fan';
 player.setIdentity('fan');
 player.skills=[];
