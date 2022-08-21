@@ -124,6 +124,7 @@ player.setNickname(get.translation(name)+"</br>(第"+get.cnNumber(num+1)+"关)")
 };
 if(!name) name="sunce";
 lib.character[name][3]=skills;
+if(lib.character[name][4].contains('hiddenSkill')) lib.character[name][4].remove('hiddenSkill');
 if(_status.characterlist) _status.characterlist.remove(name);
 player.uninit();
 player.init(name);
@@ -5708,7 +5709,7 @@ init:function(player,skill){
 }
 _status.hh=[];
 _status.hhList={};
-var ChList=["yijiang","xinghuoliaoyuan","sp2","sp","shenhua","refresh","extra","mobile","tw","yingbian","offline"];
+var ChList=["yijiang","xinghuoliaoyuan","sp2","sp","shenhua","refresh","extra","mobile","tw","yingbian","offline","sb"];
 var Sor=[];
 var Sor2=[];
 var Fp=[];
@@ -5757,13 +5758,13 @@ lib.card['skillCard_'+skills[z]].image='character:'+j;
 if(ChList.contains(i)) _status.hh.addArray(ch[3]);
 }
 //ch[3]=["mc_baiban"];
-if(ch[4]&&ch[4].contains('hiddenSkill')) ch[4].remove('hiddenSkill');
+//if(ch[4]&&ch[4].contains('hiddenSkill')) ch[4].remove('hiddenSkill');
 };
 };
 var banned=[
-'xinfu_guhuo','reguhuo','jixi','duanchang','huashen','xinsheng','rexinsheng','rehuashen','jinqu','nzry_binglve','nzry_huaiju','nzry_yili','nzry_zhenglun','nzry_mingren','nzry_zhenliang','drlt_qingce','new_wuhun','kuangfeng','dawu','baonu','wumou','ol_wuqian','ol_shenfen','renjie','jilue','nzry_junlve','nzry_dinghuo','drlt_duorui','cunsi','huilei','paiyi','fuhun','zhuiyi','olddanshou','yanzhu','juexiang','jiexun','bizhuan','tongbo','xinfu_zhanji','xinfu_jijun','xinfu_fangtong','xinfu_qianchong','pdgyinshi','shuliang','zongkui','guju','bmcanshi','dingpan','xinfu_lingren','new_luoyan','junwei','gxlianhua','qizhou','fenyue','dianhu','linglong','fenxin','mouduan','cuorui','xinmanjuan','jianjie_faq','new_meibu','xinfu_xingzhao','jici','fenyong','xuehen','yingbin','midao','yishe','yinbing','juedi','bushi','xinfu_dianhua','xinfu_falu','xinfu_zhenyi','lskuizhu','xjshijian','fentian','zhiri','xindan','xinzhengnan','xinfu_xiaode','komari_xueshang','qiaosi_map',"yinka","zishu","luoshen","reluoshen",'cxliushi','zhanwan',"MC_kongshi","MC_tishen","MC_caihong","rende","youlong","huoxin","nsyice","wanggui","shiki_omusubi","chuanxin","kuangcai","xinfu_yanyu","xinfu_xushen","rexushen","decadexushen",'boss_juejing','xinlonghun','minishangshi','shangshi','reshangshi','pianchong',"fangzhu","spfuluan","zqingcheng","heji","spwuku","twlingbao","refuhan","binglun","gebo","xiusheng","yinlang","spsongshu","ejian","buqi","mibei","xinzifu","twyingjia","tongyuan","tuntian","oltuntian","retuntian","quanji","requanji","xinquanji","chuyuan","twfuhan","rekurou","zhuangdan","jiaozhao","huimin","lslixun",'yingba','scfuhai','pinghe','shuchen','wangjing','spfangzong','yaohu','xianzhu','jishi','binghuo','mjfubi','mjzuici','jishi','gongxiu','jutu','yaohu','yuanqing','xinmingshi','zaoli','xinghan','spfushi','xinzongzuo','xinfu_tunjun','olzaowan'
+'xinfu_guhuo','reguhuo','jixi','duanchang','huashen','xinsheng','rexinsheng','rehuashen','jinqu','nzry_binglve','nzry_huaiju','nzry_yili','nzry_zhenglun','nzry_mingren','nzry_zhenliang','drlt_qingce','new_wuhun','kuangfeng','dawu','baonu','wumou','ol_wuqian','ol_shenfen','renjie','jilue','nzry_junlve','nzry_dinghuo','drlt_duorui','cunsi','huilei','paiyi','fuhun','zhuiyi','olddanshou','yanzhu','juexiang','jiexun','bizhuan','tongbo','xinfu_zhanji','xinfu_jijun','xinfu_fangtong','xinfu_qianchong','pdgyinshi','shuliang','zongkui','guju','bmcanshi','dingpan','xinfu_lingren','new_luoyan','junwei','gxlianhua','qizhou','fenyue','dianhu','linglong','fenxin','mouduan','cuorui','xinmanjuan','jianjie_faq','new_meibu','xinfu_xingzhao','jici','fenyong','xuehen','yingbin','midao','yishe','yinbing','juedi','bushi','xinfu_dianhua','xinfu_falu','xinfu_zhenyi','lskuizhu','xjshijian','fentian','zhiri','xindan','xinzhengnan','xinfu_xiaode','komari_xueshang','qiaosi_map',"yinka","zishu","luoshen","reluoshen",'cxliushi','zhanwan',"MC_kongshi","MC_tishen","MC_caihong","rende","youlong","huoxin","nsyice","wanggui","shiki_omusubi","chuanxin","kuangcai","xinfu_yanyu","xinfu_xushen","rexushen","decadexushen",'boss_juejing','xinlonghun','minishangshi','shangshi','reshangshi','pianchong',"fangzhu","spfuluan","zqingcheng","heji","spwuku","twlingbao","refuhan","binglun","gebo","xiusheng","yinlang","spsongshu","ejian","buqi","mibei","xinzifu","twyingjia","tongyuan","tuntian","oltuntian","retuntian","quanji","requanji","xinquanji","chuyuan","twfuhan","rekurou","zhuangdan","jiaozhao","huimin","lslixun",'yingba','scfuhai','pinghe','shuchen','wangjing','spfangzong','yaohu','xianzhu','jishi','binghuo','mjfubi','mjzuici','jishi','gongxiu','jutu','yaohu','yuanqing','xinmingshi','zaoli','xinghan','spfushi','xinzongzuo','xinfu_tunjun','olzaowan','dili','yuheng','spyingwu','yuzhang','twzhongchi','twyingjia','yjyibing','yjsancai','yjxiandao'
 ];
-var add=["pozhu","qingjiao","quanfeng","lvli","tongqu","xinwanlan","juece","mouli","chuhai","shuishi","zhongzuo"];
+var add=["pozhu","qingjiao","quanfeng","lvli","tongqu","xinwanlan","juece","mouli","chuhai","shuishi","zhongzuo","rejianyan","mc_xifa"];
 var list=[];
 for(var i=0;i<_status.hh.length;i++){
 name=_status.hh[i];
@@ -5985,9 +5986,10 @@ player.idM=_status.mc_idm;
 _status.mc_idm++;
 };
 game.broadcastAll(function(player){
-if(player.name) lib.character[player.name][3]=[];
+//if(player.name) lib.character[player.name][3]=[];
 if(player.name1) lib.character[player.name1][3]=[];
-if(player.name2) lib.character[player.name2][3]=[];
+if(lib.character[player.name1][4].contains('hiddenSkill')) lib.character[player.name1][4].remove('hiddenSkill');
+//if(player.name2) lib.character[player.name2][3]=[];
 },player);
 game.broadcastAll(function(player){
 if(!player.node.Gs_Hh_ShowSkills){
@@ -6027,7 +6029,7 @@ player.appendChild(player.node.Gs_Hh_ShowSkills);
 }
 player.update();
 },player);
-var name=player.name;
+var name=player.name1;
 player.uninit();
 player.init(name);
 player.maxHp=4;
