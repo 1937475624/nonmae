@@ -1,6 +1,6 @@
 game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"MCBE命令助手包",content:function(config,pack){
-game.saveConfig('联机包_version','1.84');
-lib.config.联机包_version='1.84';
+game.saveConfig('联机包_version','1.84.1');
+lib.config.联机包_version='1.84.1';
 game.it=function(){
 };
 if(!lib.config.联机包_version_2||lib.config.联机包_version_2!=lib.versionOL){
@@ -13,6 +13,77 @@ game.it();
 lib.config.联机包_init==lib.config.联机包_version;
 game.saveConfig('联机包_init',lib.config.联机包_version);
 }
+game.shijianCreateProgressx = (title, max, fileName, value) => {
+/** @type { progress } */
+// @ts-ignore
+// 代码复制于在线更新(诗笺)扩展
+const parent = ui.create.div(ui.window, {
+textAlign: 'center',
+width: '300px',
+height: '150px',
+left: 'calc(50% - 150px)',
+top: 'auto',
+bottom: 'calc(50% - 75px)',
+zIndex: '10',
+boxShadow: 'rgb(0 0 0 / 40 %) 0 0 0 1px, rgb(0 0 0 / 20 %) 0 3px 10px',
+backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4))',
+borderRadius: '8px'
+});
+
+// 可拖动
+parent.className = 'dialog';
+
+const container = ui.create.div(parent, {
+position: 'absolute',
+top: '0',
+left: '0',
+width: '100%',
+height: '100%'
+});
+
+container.ontouchstart = ui.click.dialogtouchStart;
+container.ontouchmove = ui.click.touchScroll;
+// @ts-ignore
+container.style.WebkitOverflowScrolling = 'touch';
+parent.ontouchstart = ui.click.dragtouchdialog;
+
+const caption = ui.create.div(container, '', title, {
+position: 'relative',
+paddingTop: '8px',
+fontSize: '20px'
+});
+
+ui.create.node('br', container);
+
+const tip = ui.create.div(container, {
+position: 'relative',
+paddingTop: '8px',
+fontSize: '20px',
+width: '100%'
+});
+const file = ui.create.node('span', tip, '', fileName);
+file.style.width = file.style.maxWidth = '100%';
+ui.create.node('br', tip);
+const index = ui.create.node('span', tip, '', value || '0');
+ui.create.node('span', tip, '', '/');
+const maxSpan = ui.create.node('span', tip, '', (max + '') || '未知');
+
+ui.create.node('br', container);
+
+const progress = ui.create.node('progress', container);
+progress.setAttribute('value', value || '0');
+progress.setAttribute('max', max);
+
+parent.getTitle = () => caption.innerText;
+parent.setTitle = (title) => caption.innerText = title;
+parent.getFileName = () => file.innerText;
+parent.setFileName = (name) => file.innerText = name;
+parent.getProgressValue = () => progress.value;
+parent.setProgressValue = (value) => progress.value = index.innerText = value;
+parent.getProgressMax = () => progress.max;
+parent.setProgressMax = (max) => progress.max = maxSpan.innerText = max;
+return parent;
+};
 game.gxsc=function(){
 for(var i in window.file_Mt_Gs){
 if(!bool) var bool=false;
@@ -51,38 +122,38 @@ var n2=lists.length;
 var n3=0;
 if(html){
 var button=html.childNodes[0].childNodes[0];
+var namelod=button.innerHTML;
 button.disabled=true;
-var span = document.createElement('span');
-span.style.whiteSpace = 'nowrap';
-span.innerHTML=`正在下载（${n1}/${n2}）`;
-html.childNodes[0].appendChild(span);
+button.innerHTML = '更新中';
 };
+var name=lists[0].slice(49);
+_status.Gs_gxName=name;
+const copyList = lists.slice(0);
+const progress=game.shijianCreateProgressx('下载扩展文件', copyList.length, name);
+progress.style.bottom = 'calc(25% - 75px)';
 game.multiDownload(lists,function(){
 n1++;
-if(span){
-if(n1+n3>=n2){
-span.innerHTML=`下载完毕（${n1}/${n2}）`;
-}else span.innerHTML=`正在下载（${n1}/${n2}）`;
-};
+progress.setProgressValue(n1);
+progress.setFileName(_status.Gs_gxName);
 },function(e){
 n3++;
+progress.setFileName(_status.Gs_gxName);
 noList.add(_status.Gs_gxUrl);
 noName+=_status.Gs_gxName+"、";
 game.print('下载失败：'+_status.Gs_gxName);
 },function(){
 _status.Gs_gx=false;
-if(html&&noList.length>0) html.innerHTML="<span style='text-decoration: underline'>有文件下载失败！点击重试。</span>";
+progress.setProgressValue(copyList.length);
+progress.setFileName("下载完毕");
+setTimeout(function(){
+progress.remove();
+if(button){
+button.disabled = false;
+button.innerHTML=namelod;
+};
 if(noList.length==0){
 if(button) button.disabled=false;
-if(html){
-var button2 = document.createElement('button');
-button2.innerHTML = '重新启动';
-button2.onclick = game.reload;
-button2.style.marginTop = '8px';
-html.childNodes[0].appendChild(button2);
-}else{
 if(confirm("扩展更新完毕是否重启？")) game.reload();
-};
 }else{
 var str=noList.length>1?"等文件":"";
 if(confirm(noName.slice(0,noName.length-1)+str+"下载失败是否重试？")){
@@ -91,6 +162,7 @@ game.gx(noList,html);
 }else game.gx(noList);
 };
 };
+},250);
 },function(c){
 var name=c.slice(49);
 _status.Gs_gxName=name;
