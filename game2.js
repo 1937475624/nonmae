@@ -12225,6 +12225,12 @@ _status.event.untrigger(true);
 							}
 						}
 					},
+					wss_mode:{
+						name:'使用WSS协议',
+						init:false,
+						frequent:true,
+						intro:'在用户填写的IP地址没有直接指定使用WS/WSS协议的情况下，默认使用WSS协议，而非WS协议来连接到联机服务器。<br>请不要轻易勾选此项！',
+					},
 				}
 			},
 			boss:{
@@ -14182,6 +14188,7 @@ _status.event.untrigger(true);
 							}
 						}
 						for(var i=0;i<lib.config.extensions.length;i++){
+							if(window.bannedExtensions.contains(lib.config.extensions[i])) continue;
 							var extcontent=localStorage.getItem(lib.configprefix+'extension_'+lib.config.extensions[i]);
 							if(extcontent){
 								_status.evaluatingExtension=true;
@@ -15952,24 +15959,6 @@ _status.event.untrigger(true);
 				}
 			},
 			parsex:function(func){
-				var k;
-				var str='(';
-				str+=func.toString();
-				if(str.indexOf('step 0')==-1){
-					str=str.replace(/\{/,'{{if(event.step==1) {event.finish();return;}');
-				}
-				else{
-					for(k=1;k<99;k++){
-						if(str.indexOf('step '+k)==-1) break;
-						str=str.replace(new RegExp("'step "+k+"'",'g'),"break;case "+k+":");
-						str=str.replace(new RegExp('"step '+k+'"','g'),"break;case "+k+":");
-					}
-					str=str.replace(/'step 0'|"step 0"/,'if(event.step=='+k+') {event.finish();return;}switch(step){case 0:');
-				}
-				str+='})';
-				return str;
-			},
-			parsex:function(func){
 				var str=func.toString();
 				str=str.slice(str.indexOf('{')+1);
 				if(str.indexOf('step 0')==-1){
@@ -17101,7 +17090,7 @@ _status.event.untrigger(true);
 								break;
 							}
 						};
-						document.addEventListener(lib.config.touchscreen?'touchend':'click',click);
+						document.addEventListener(lib.config.touchscreen?'touchstart':'mousedown',click);
 						
 						game.pause();
 						game.countChoose();
@@ -19252,9 +19241,33 @@ _status.event.untrigger(true);
 						if(ok){
 							ui.click.ok();
 						}
-						else if(ai.basic.chooseCard(event.ai)){
-							ui.click.ok();
-							event._aiexcludeclear=true;
+						else if(ai.basic.chooseCard(event.ai1||event.ai)){
+							if(ai.basic.chooseTarget(event.ai2)){
+								ui.click.ok();
+								event._aiexcludeclear=true;
+							}
+							else{
+								if(!event.norestore){
+									if(event.skill){
+										var skill=event.skill;
+										ui.click.cancel();
+										event._aiexclude.add(skill);
+										var info=get.info(skill);
+										if(info.sourceSkill){
+											event._aiexclude.add(info.sourceSkill);
+										}
+									}
+									else{
+										get.card(true).aiexclude();
+										game.uncheck();
+									}
+									event.redo();
+									game.resume();
+								}
+								else{
+									ui.click.cancel();
+								}
+							}
 						}
 						else if(event.skill&&!event.norestore){
 							var skill=event.skill;
@@ -22427,11 +22440,18 @@ _status.event.untrigger(true);
 						},get.delayx(gain2t,gain2t));
 					}
 					else if(event.source&&(event.animate=='give'||event.animate=='giveAuto')){
-						if(event.animate=='give') event.source['$'+event.animate](cards,player);
+						var evtmap=event.relatedLose;
+						if(event.animate=='give'){
+							if(evtmap&&evtmap.cards&&evtmap.cards.length>0) event.source.$give(evtmap.cards,player);
+							else event.source.$give(cards,player);
+						}
 						else{
 							var givemap={hs:[],ots:[]};
-							for(var i=0;i<cards.length;i++){
-								givemap[event.relatedLose&&event.relatedLose.hs&&event.relatedLose.hs.contains(cards[i])?'hs':'ots'].push(cards[i]);
+							if(evtmap&&evtmap.hs&&evtmap.cards){
+								for(var i=0;i<cards.length;i++){
+									if(evtmap.hs.contains(cards[i])) givemap.hs.push(cards[i]);
+									else if(evtmap.cards.contains(cards[i])) givemap.ots.push(cards[i]);
+								}
 							}
 							if(givemap.hs.length) event.source.$giveAuto(givemap.hs,player);
 							if(givemap.ots.length) event.source.$give(givemap.ots,player);
@@ -24802,14 +24822,14 @@ _status.event.untrigger(true);
 						if(i=='global'){
 							lib.skill.global=skills[i];
 						}
-						else if(i=='skillinfo'){
-							for(var j in skills[i]){
-								if(!lib.skill[j]){
-									lib.skill[j]={};
-								}
-								lib.skill[j].chooseButton=skills[i][j];
-							}
-						}
+						//else if(i=='skillinfo'){
+						//	for(var j in skills[i]){
+						//		if(!lib.skill[j]){
+						//			lib.skill[j]={};
+						//		}
+						//		lib.skill[j].chooseButton=skills[i][j];
+						//	}
+						//}
 						else if(i=='stat'){
 							this.stat=[skills.stat];
 						}
@@ -25957,6 +25977,7 @@ _status.event.untrigger(true);
 						}
 					}
 					next.position='hs';
+					if(next.ai2==undefined) next.ai2=(()=>1);
 					next.setContent('chooseToRespond');
 					next._args=Array.from(arguments);
 					return next;
@@ -27375,6 +27396,7 @@ _status.event.untrigger(true);
 				give:function(cards,target,visible){
 					var next=target.gain(cards,this);
 					next.animate=visible?'give':'giveAuto';
+					next.giver=this;
 				},
 				lose:function(){
 					var next=game.createEvent('lose');
@@ -28132,66 +28154,68 @@ _status.event.untrigger(true);
 					else if(info&&info.logv!==false){
 						game.logv(this,name,targets);
 					}
-					var player=this;
-					var players=player.getSkills(null,false,false);
-					var equips=player.getSkills('e');
-					var global=lib.skill.global.slice(0);
-					var logInfo={
-						skill:name,
-						targets:targets,
-						event:_status.event,
-					};
-					if(info.sourceSkill){
-						logInfo.sourceSkill=name;
-						if(global.contains(name)){
-							logInfo.type='global';
-						}
-						else if(players.contains(name)){
-							logInfo.type='player';
-						}
-						else if(equips.contains(name)){
-							logInfo.type='equip';
-						}
-					}
-					else{
-						if(global.contains(name)){
+					if(info){
+						var player=this;
+						var players=player.getSkills(null,false,false);
+						var equips=player.getSkills('e');
+						var global=lib.skill.global.slice(0);
+						var logInfo={
+							skill:name,
+							targets:targets,
+							event:_status.event,
+						};
+						if(info.sourceSkill){
 							logInfo.sourceSkill=name;
-							logInfo.type='global';
-						}
-						else if(players.contains(name)){
-							logInfo.sourceSkill=name;
-							logInfo.type='player';
-						}
-						else if(equips.contains(name)){
-							logInfo.sourceSkill=name;
-							logInfo.type='equip';
+							if(global.contains(name)){
+								logInfo.type='global';
+							}
+							else if(players.contains(name)){
+								logInfo.type='player';
+							}
+							else if(equips.contains(name)){
+								logInfo.type='equip';
+							}
 						}
 						else{
-							var bool=false;
-							for(var i of players){
-								var expand=[i];
-								game.expandSkills(expand);
-								if(expand.contains(name)){
-									bool=true;
-									logInfo.sourceSkill=i;
-									logInfo.type='player';
-									break;
-								}
+							if(global.contains(name)){
+								logInfo.sourceSkill=name;
+								logInfo.type='global';
 							}
-							if(!bool){
+							else if(players.contains(name)){
+								logInfo.sourceSkill=name;
+								logInfo.type='player';
+							}
+							else if(equips.contains(name)){
+								logInfo.sourceSkill=name;
+								logInfo.type='equip';
+							}
+							else{
+								var bool=false;
 								for(var i of players){
 									var expand=[i];
 									game.expandSkills(expand);
 									if(expand.contains(name)){
+										bool=true;
 										logInfo.sourceSkill=i;
-										logInfo.type='equip';
+										logInfo.type='player';
 										break;
+									}
+								}
+								if(!bool){
+									for(var i of players){
+										var expand=[i];
+										game.expandSkills(expand);
+										if(expand.contains(name)){
+											logInfo.sourceSkill=i;
+											logInfo.type='equip';
+											break;
+										}
 									}
 								}
 							}
 						}
+						player.getHistory('useSkill').push(logInfo);
 					}
-					player.getHistory('useSkill').push(logInfo);
 					if(this._hookTrigger){
 						for(var i=0;i<this._hookTrigger.length;i++){
 							var info=lib.skill[this._hookTrigger[i]].hookTrigger;
@@ -36197,7 +36221,9 @@ _status.event.untrigger(true);
 					game.ws.close();
 					delete game.ws;
 				}
-				game.ws=new WebSocket('ws://'+ip+'');
+				var str='';
+				if(ip.indexOf('wss://')!=0&&ip.indexOf('ws://')!=0) str=(get.config('wss_mode','connect')?'wss://':'ws://');
+				game.ws=new WebSocket(str+ip+'');
 			}
 			catch(e){
 				alert('错误：无效联机地址');
@@ -48789,7 +48815,17 @@ _status.event.untrigger(true);
 								});
 							}
 							else{
-								lib.init.js(extensionURL.replace(/raw\.githubusercontent\.com/,'rawgit.com')+'catalog.js',null,loaded,function(){
+								lib.init.req(extensionURL.replace(/raw\.githubusercontent\.com/,'rawgit.com')+'catalog.js',function(){
+									try{
+										eval(this.responseText);
+									}
+									catch(e){
+										delete window.extension;
+										loading.innerHTML='连接失败';
+										return;
+									}
+									loaded();
+								},function(){
 									delete window.extension;
 									loading.innerHTML='连接失败';
 								});
@@ -57977,11 +58013,11 @@ _status.event.untrigger(true);
 					storage:lib.playerOL[i].storage,
 				}
 			}
-			for(var i in lib.skill){
-				if(lib.skill[i].chooseButton&&lib.skill[i].enable){
-					skillinfo[i]=lib.skill[i].chooseButton;
-				}
-			}
+			//for(var i in lib.skill){
+			//	if(lib.skill[i].chooseButton&&lib.skill[i].enable){
+			//		skillinfo[i]=lib.skill[i].chooseButton;
+			//	}
+			//}
 			skills.skillinfo=skillinfo;
 			if(player){
 				skills.stat=player.getStat();
