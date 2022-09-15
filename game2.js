@@ -5132,9 +5132,14 @@ if(filter(ui.discardPile.childNodes[i])){
 return ui.discardPile.childNodes[i];
 }
 };
+for(var i=0;i<ui.ordering.childNodes.length;i++){
+if(filter(ui.ordering.childNodes[i])){
+return ui.ordering.childNodes[i];
+}
+};
 var found=null;
 game.findPlayer(function(current){
-var ej=current.getCards('hesj');
+var ej=current.getCards('hesjx');
 for(var i=0;i<ej.length;i++){
 if(filter(ej[i])){
 found=ej[i];
@@ -6523,13 +6528,14 @@ qibaodao:"qinggang",
 };
 var list=ui.ordering.childNodes;
 var list2=ui.discardPile.childNodes;
-var list3=ui.special.childNodes.length;
+var list3=ui.special.childNodes;
 if(_status.renku.length>0) game.cardsDiscard(_status.renku);
 delete _status.pyzhuren;
 delete _status.dz_mantianguohai_suits;
 delete _status.tiaojiyanmei_suits;
 delete _status.binglinchengxiax;
-if(ui.cardPile.childElementCount>0) cards.addArray(get.cards(ui.cardPile.childElementCount));
+delete _status.olshengong_map;
+//if(ui.cardPile.childElementCount>0) cards.addArray(get.cards(ui.cardPile.childElementCount));
 for(var i=0;i<list.length;i++){
 cards.push(list[i]);
 };
@@ -13684,13 +13690,6 @@ _status.event.untrigger(true);
 						return this.childNodes[row].childNodes[col];
 					}
 				};
-				Array.prototype.numOf=function(item){
-					var num=0;
-					for(var i=0;i<this.length;i++){
-						if(this[i]==item) num++;
-					}
-					return num;
-				};
 				Array.prototype.filterInD=function(pos){
 					if(!pos) pos='o';
 					var list=[];
@@ -18015,11 +18014,11 @@ _status.event.untrigger(true);
 					}).set('prompt','选择'+get.translation(card)+'的结算方向').set('choice',choice).set('forceDie',true);
 					"step 2"
 					if(result&&result.control=='顺时针'){
-						var evt=event.getParent();
+						var evt=event.getParent(),sorter=(_status.currentPhase||player);
 						evt.fixedSeat=true;
-						evt.targets.sortBySeat();
+						evt.targets.sortBySeat(sorter);
 						evt.targets.reverse();
-						if(evt.targets[evt.targets.length-1]==player){
+						if(evt.targets[evt.targets.length-1]==sorter){
 							evt.targets.unshift(evt.targets.pop());
 						}
 					}
@@ -21558,7 +21557,7 @@ _status.event.untrigger(true);
 						if(num==0&&targets.length>1){
 							if(!info.multitarget){
 								if(!event.fixedSeat&&!sort){
-									targets.sortBySeat(player);
+									targets.sortBySeat((_status.currentPhase||player));
 								}
 								if(animate)	for(var i=0;i<targets.length;i++){
 									targets[i].animate('target');
@@ -21573,9 +21572,9 @@ _status.event.untrigger(true);
 					}
 					event.sortTarget();
 					event.getTriggerTarget=function(list1,list2){
-						var listx=list1.slice(0).sortBySeat();
+						var listx=list1.slice(0).sortBySeat((_status.currentPhase||player));
 						for(var i=0;i<listx.length;i++){
-							if(list2.numOf(listx[i])<listx.numOf(listx[i])) return listx[i];
+							if(get.numOf(list2,listx[i])<get.numOf(listx,listx[i])) return listx[i];
 						}
 						return null;
 					}
@@ -22320,6 +22319,7 @@ _status.event.untrigger(true);
 								if(!map[id]) map[id]=[];
 								map[id].push(i);
 							}
+							else if(!event.updatePile&&get.position(i)=='c') event.updatePile=true;
 						}
 						for(var i in map){
 							var owner=(_status.connectMode?lib.playerOL:game.playerMap)[i];
@@ -22481,6 +22481,7 @@ _status.event.untrigger(true);
 					}
 					"step 4"
 					game.delayx();
+					if(event.updatePile) game.updateRoundNumber();
 				},
 				addToExpansion:function(){
 					"step 0"
@@ -22494,6 +22495,7 @@ _status.event.untrigger(true);
 								if(!map[id]) map[id]=[];
 								map[id].push(i);
 							}
+							else if(!event.updatePile&&get.position(i)=='c') event.updatePile=true;
 						}
 						for(var i in map){
 							var owner=(_status.connectMode?lib.playerOL:game.playerMap)[i];
@@ -22601,6 +22603,7 @@ _status.event.untrigger(true);
 					}
 					"step 4"
 					game.delayx();
+					if(event.updatePile) game.updateRoundNumber();
 				},
 				lose:function(){
 					"step 0"
@@ -23304,6 +23307,7 @@ _status.event.untrigger(true);
 					"step 0"
 					var owner=get.owner(card)
 					if(owner) owner.lose(card,ui.special,'visible').set('type','equip').set('getlx',false);
+					else if(get.position(card)=='c') event.updatePile=true;
 					"step 1"
 					if(event.cancelled){
 						event.finish();
@@ -23365,6 +23369,7 @@ _status.event.untrigger(true);
 					player.$equip(card);
 					game.addVideo('equip',player,get.cardInfo(card));
 					game.log(player,'装备了',card);
+					if(event.updatePile) game.updateRoundNumber();
 					"step 5"
 					var info=get.info(card,false);
 					if(info.onEquip&&(!info.filterEquip||info.filterEquip(card,player))){
@@ -23394,8 +23399,9 @@ _status.event.untrigger(true);
 					if(cards){
 						var owner=get.owner(cards[0]);
 						if(owner){
-							event.relatedLose=owner.lose(cards,'visible').set('getlx',false);
+							event.relatedLose=owner.lose(cards,'visible',ui.special).set('getlx',false);
 						}
+						else if(get.position(cards[0])=='c') event.updatePile=true;
 					}
 					"step 1"
 					if(cards[0].destroyed){
@@ -23467,6 +23473,7 @@ _status.event.untrigger(true);
 						}
 						game.addVideo('addJudge',player,[get.cardInfo(cards[0]),cards[0].viewAs]);
 					}
+					if(event.updatePile) game.updateRoundNumber();
 				},
 				judge:function(){
 					"step 0"
@@ -49792,9 +49799,9 @@ _status.event.untrigger(true);
 							checkCheat();
 						};
 						menuUpdates.push(function(){
-							if(_status.video||(_status.connectMode&&game.online)){
+							if(_status.video||_status.connectMode){
 								node.classList.add('off');
-								/*if(node.classList.contains('active')){
+								if(node.classList.contains('active')){
 									node.classList.remove('active');
 									node.link.remove();
 									active=start.firstChild.firstChild;
@@ -49805,8 +49812,8 @@ _status.event.untrigger(true);
 								page.remove();
 								cheatButton.remove();
 								if(_status.video) node.remove();
-								return;*/
-							}else node.classList.remove('off');
+								return;
+							}
 							var list=[];
 							for(var i=0;i<game.players.length;i++){
 								if(lib.character[game.players[i].name]||game.players[i].name1){
@@ -49865,7 +49872,7 @@ _status.event.untrigger(true);
 						node.link=page;
 						page.classList.add('menu-sym');
 						menuUpdates.push(function(){
-							if(_status.connectMode&&game.online){
+							if(_status.connectMode){
 								node.classList.add('off');
 								if(node.classList.contains('active')){
 									node.classList.remove('active');
@@ -49874,7 +49881,7 @@ _status.event.untrigger(true);
 									active.classList.add('active');
 									rightPane.appendChild(active.link);
 								}
-							}else node.classList.remove('off');
+							}
 						});
 						var text=document.createElement('div');
 						text.style.width='194px';
@@ -53187,7 +53194,7 @@ _status.event.untrigger(true);
 								this.blur();
 								this.disabled=true;
 								this.style.opacity=0.6;
-								button.textnode.innerHTML='发状态(1)';
+								button.textnode.innerHTML='发状态(10)';
 								button.intervaltext=button.textnode.innerHTML;
 								var num=1;
 								var that=this;
@@ -57064,6 +57071,13 @@ _status.event.untrigger(true);
 		},
 	};
 	var get={
+		numOf:function(obj,item){
+			var num=0;
+			for(var i=0;i<obj.length;i++){
+				if(obj[i]==item) num++;
+			}
+			return num;
+		},
 		connectNickname:function(){
 			return typeof lib.config.connect_nickname=='string'?(lib.config.connect_nickname.slice(0,12)):'无名玩家';
 		},
@@ -59405,10 +59419,10 @@ _status.event.untrigger(true);
 			if(item.cardtags&&item.cardtags.contains(tag)) return true;
 			return false;
 		},
-		tag:function(item,tag,item2){
+		tag:function(item,tag,item2,bool){
 			var result;
 			if(get.info(item)&&get.info(item).ai&&get.info(item).ai.tag){
-				result=get.info(item).ai.tag[tag];
+				result=get.info(item,bool).ai.tag[tag];
 			}
 			if(typeof result=='function') return result(item,item2);
 			return result;
