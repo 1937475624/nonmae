@@ -317,6 +317,7 @@ return !game.hhGameAduioList[game.me.playerid].contains(i);
 skills=skills2.randomSort();
 }; 
 game.expandSkills(list);
+if(name=="shen_sunquan") skills=["dili","yuheng","dili_shengzhi","dili_chigang","dili_qionglan","dili_quandao","dili_yuanlv"].randomSort();
 var x=0;
 for(var i of list){
 var skill=skills[x];
@@ -17210,9 +17211,12 @@ _status.event.untrigger(true);
 							buttons.classList.add('guanxing');
 							buttons._link=i;
 							if(list[i][1]){
-								ui.create.buttons(list[i][1],'card',buttons);
+								var cardsb=ui.create.buttons(list[i][1],'card',buttons);
+								if(list[i][2]&&typeof list[i][2]=='string'){
+									for(var ij of cardsb) ij.node.gaintag.innerHTML=get.translation(list[i][2]);
+								}
 							}
-							if(list[i][2]) buttons.textPrompt=list[i][2];
+							if(list[i][2]&&typeof list[i][2]=='function') buttons.textPrompt=list[i][2];
 						}
 						event.dialog.open();
 						updateButtons();
@@ -18841,8 +18845,9 @@ _status.event.untrigger(true);
 						if(lib.card[name].cancel){
 							var next=game.createEvent(name+'Cancel');
 							next.setContent(lib.card[name].cancel);
-							next.card=event.card;
 							next.cards=[event.card];
+							if(!event.card.viewAs) next.card=get.autoViewAs(event.card);
+							else next.card=get.autoViewAs({name:name},next.cards);
 							next.player=player;
 						}
 					}
@@ -18850,8 +18855,9 @@ _status.event.untrigger(true);
 						var next=game.createEvent(name);
 						next.setContent(lib.card[name].effect);
 						next._result=result;
-						next.card=event.card;
 						next.cards=[event.card];
+						if(!event.card.viewAs) next.card=get.autoViewAs(event.card);
+						else next.card=get.autoViewAs({name:name},next.cards);
 						next.player=player;
 					}
 					ui.clear();
@@ -19420,7 +19426,7 @@ _status.event.untrigger(true);
 						}
 						var range=get.select(event.selectCard);
 						if(event.isMine()){
-						game.check();
+							game.check();
 							if(event.hsskill&&!event.forced&&_status.prehidden_skills.contains(event.hsskill)){
 								ui.click.cancel();
 								return;
@@ -20033,7 +20039,7 @@ _status.event.untrigger(true);
 						event.dialog.open();
 					}
 					if(event.isMine()){
-					game.check();
+						game.check();
 						if(event.hsskill&&!event.forced&&_status.prehidden_skills.contains(event.hsskill)){
 							ui.click.cancel();
 							return;
@@ -20220,7 +20226,7 @@ _status.event.untrigger(true);
 					}
 					else{
 						if(event.isMine()){
-						game.check();						
+							game.check();
 							game.pause();
 							if(event.hsskill&&!event.forced&&_status.prehidden_skills.contains(event.hsskill)){
 								ui.click.cancel();
@@ -22258,6 +22264,8 @@ _status.event.untrigger(true);
 					'step 1'
 					player.gain(event.cards2);
 					target.gain(event.cards1);
+					'step 2'
+					game.delayx();
 				},
 				swapHandcardsx:function(){
 					'step 0'
@@ -27914,7 +27922,10 @@ _status.event.untrigger(true);
 							game.cardsDiscard(card);
 						}
 						else{
-							if(card.name!=name){
+							if(card.cards&&card.cards.length){
+								target.addJudge(name,card.cards[0]);
+							}
+							else if(card.name!=name){
 								target.addJudge(name,card);
 							}
 							else{
@@ -28118,7 +28129,7 @@ _status.event.untrigger(true);
 					var checkShow=this.checkShow(name);
 					if(lib.translate[name]){
 						this.trySkillAnimate(name,popname,checkShow);
-						if(typeof targets=='object'&&targets.length){
+						if(Array.isArray(targets)&&targets.length){
 							var str;
 							if(targets[0]==this){
 								str='#b自己';
@@ -40555,7 +40566,7 @@ _status.event.untrigger(true);
 						info=get.info(skills2[i]);
 						enable=false;
 						if(typeof info.enable=='function') enable=info.enable(event);
-						else if(typeof info.enable=='object') enable=info.enable.contains(event.name);
+						else if(Array.isArray(info.enable)) enable=info.enable.contains(event.name);
 						else if(info.enable=='phaseUse') enable=(event.type=='phase');
 						else if(typeof info.enable=='string') enable=(info.enable==event.name);
 						if(enable){
@@ -53194,7 +53205,7 @@ _status.event.untrigger(true);
 								this.blur();
 								this.disabled=true;
 								this.style.opacity=0.6;
-								button.textnode.innerHTML='发状态(10)';
+								button.textnode.innerHTML='发状态(1)';
 								button.intervaltext=button.textnode.innerHTML;
 								var num=1;
 								var that=this;
@@ -53231,6 +53242,7 @@ _status.event.untrigger(true);
 							else{
 								ui.create.div('.name','<span style="opacity:0.6">'+(button.info[i][0]||'无名玩家'),node);
 							}
+							//show ID
 							//ui.create.div('.videostatus',node,button.info[i][5]);
 							//node.classList.add('videonodestatus');
 							if(button.info[i][3]){
@@ -59293,7 +59305,7 @@ _status.event.untrigger(true);
 					if(filter.hasOwnProperty(j)){
 						if(get.itemtype(arguments[i])=='card'){
 							if(j=='name'){
-								if(typeof filter[j]=='object'){
+								if(Array.isArray(filter[j])){
 									if(filter[j].contains(get.name(arguments[i]))==false) return false;
 								}
 								else if(typeof filter[j]=='string'){
@@ -59301,7 +59313,7 @@ _status.event.untrigger(true);
 								}
 							}
 							else if(j=='type'){
-								if(typeof filter[j]=='object'){
+								if(Array.isArray(filter[j])){
 									if(filter[j].contains(get.type(arguments[i]))==false) return false;
 								}
 								else if(typeof filter[j]=='string'){
@@ -59309,7 +59321,7 @@ _status.event.untrigger(true);
 								}
 							}
 							else if(j=='subtype'){
-								if(typeof filter[j]=='object'){
+								if(Array.isArray(filter[j])){
 									if(filter[j].contains(get.subtype(arguments[i]))==false) return false;
 								}
 								else if(typeof filter[j]=='string'){
@@ -59317,7 +59329,7 @@ _status.event.untrigger(true);
 								}
 							}
 							else if(j=='color'){
-								if(typeof filter[j]=='object'){
+								if(Array.isArray(filter[j])){
 									if(filter[j].contains(get.color(arguments[i]))==false) return false;
 								}
 								else if(typeof filter[j]=='string'){
@@ -59325,7 +59337,7 @@ _status.event.untrigger(true);
 								}
 							}
 							else if(j=='suit'){
-								if(typeof filter[j]=='object'){
+								if(Array.isArray(filter[j])){
 									if(filter[j].contains(get.suit(arguments[i]))==false) return false;
 								}
 								else if(typeof filter[j]=='string'){
@@ -59333,14 +59345,14 @@ _status.event.untrigger(true);
 								}
 							}
 							else if(j=='number'){
-								if(typeof filter[j]=='object'){
+								if(Array.isArray(filter[j])){
 									if(filter[j].contains(get.number(arguments[i]))==false) return false;
 								}
 								else if(typeof filter[j]=='string'){
 									if(get.number(arguments[i])!=filter[j]) return false;
 								}
 							}
-							else if(typeof filter[j]=='object'){
+							else if(Array.isArray(filter[j])){
 								if(filter[j].contains(arguments[i][j])==false) return false;
 							}
 							else if(typeof filter[j]=='string'){
@@ -59612,7 +59624,7 @@ _status.event.untrigger(true);
 					return lib.translate[skill+'_info'];
 				}
 				case 'cardCount':{
-					if(typeof content=='object'&&typeof content.length=='number'){
+					if(Array.isArray(content)){
 						return '共有'+get.cnNumber(content.length)+'张牌';
 					}
 					return false;
