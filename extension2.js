@@ -1,6 +1,6 @@
 game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"MCBE命令助手包",content:function(config,pack){
-game.saveConfig('联机包_version','1.84.4.3');
-lib.config.联机包_version='1.84.4.3';
+game.saveConfig('联机包_version','1.84.4.4');
+lib.config.联机包_version='1.84.4.4';
 game.it=function(){
 };
 if(!lib.config.联机包_version_2||lib.config.联机包_version_2!=lib.versionOL){
