@@ -3618,30 +3618,39 @@ event.target.useCard({name:'juedou',isCard:true},'nowuxie',event.target2,'noai')
 },
 },
 "mc_boss_tongji":{
-trigger:{global:'phaseBegin'},
+namex:"同疾",
+infox:"锁定技，一名其他角色对你使用的基本牌或普通锦囊牌结算后，若你是此牌的唯一目标则你视为对此牌的使用者使用一张同名牌",
+trigger:{global:'useCardAfter'},
 audio:'tongji',
 forced:true,
 filter:function(event,player){
-return event.player.hp>player.hp;
+return event.player!=player&&event.targets&&event.targets.length==1&&event.targets.contains(player)&&player.canUse(event.card.name,event.player)&&["trick","basic"].contains(get.type(event.card));
 },
 logTarget:"player",
 content:function(){
-var num=trigger.player.hp-player.hp;
-trigger.player.loseHp(num);
-player.draw(num);
-}
+player.useCard({name:trigger.card.name,isCard:true},trigger.player,"noai",false);
+},
 },
 "mc_boss_wangzun":{
-trigger:{player:'gainAfter'},
+namex:"妄尊",
+infox:"锁定技，体力值小于你的角色摸牌阶段额定摸牌数-1；你对体力值不小于你的角色使用牌无距离与次数限制",
+trigger:{global:"phaseDrawBegin2"},
 audio:'wangzun',
 forced:true,
 filter:function(event,player){
-if(_status.currentPhase==player) return false;
-return event.getParent(2).name!='mc_boss_wangzun';
+return event.player.hp<player.hp&&!event.numFixed;
 },
 content:function(){
-player.draw('nodelay');
-}
+trigger.num--;
+},
+mod:{
+targetInRange:function(card,player,target){
+if(target.hp>=player.hp) return true;
+},
+cardUsableTarget:function(card,player,target){
+if(target.hp>=player.hp) return true;
+},
+},
 },
 "mc_boss_jijiang":{
 global:"mc_boss_jijiang_buff",
@@ -4075,29 +4084,22 @@ player.draw();
 },
 "mc_shuangdao":{
 charlotte:true,
-forced:true,
-mod:{
-cardUsable:function(card,player,num){
-if(player.isPhaseUsing()&&card.name=='sha') return num+1;
-}
-},
+namex:"双刀",
+infox:"每回合限一次，当你使用指定唯一目标的【杀】结算完毕后，你可以再视为对相同目标使用一张不计入且无次数限制的【杀】",
 trigger:{player:"useCardAfter"},
+logTarget:function(trigger){
+return trigger.targets;
+},
+usable:1,
 filter:function(event,player){
 if(event.card.name!='sha') return false;
-var evt=event.getParent('phaseUse');
-if(!evt||evt.player!=player) return false;
-var index=player.getHistory('useCard',function(evtx){
-return evtx.card.name=='sha'&&evtx.getParent('phaseUse')==evt;
-}).indexOf(event);
-var bool=game.hasPlayer2(function(c){
-return c.getHistory("damage",function(evt){
-return evt.card&&evt.card==event.card;
-}).length>0;
-});
-return index==1&&!bool;
+return event.targets.length==1&&player.canUse("sha",event.targets[0])&&event.targets[0].isAlive();
+},
+check:function(event,player){
+return get.effect(event.targets[0],{name:"sha",isCard:true},player,player);
 },
 content:function(){
-player.draw();
+player.useCard({name:"sha",isCard:true},trigger.targets[0],false);
 },
 },
 "mc_tiaopan":{
@@ -4548,150 +4550,6 @@ namex:"巴卡巴卡",
 },
 };
 game.Mc_EventList={
-/*damage:function(){
-"step 0"
-event.forceDie=true;
-event.trigger('damageBegin1');
-"step 1"
-event.trigger('damageBegin2');
-"step 2"
-event.trigger('damageBegin3');
-"step 3"
-event.trigger('damageBegin4');
-"step 4"
-if(num>0&&player.hujia&&!player.hasSkillTag('nohujia')){
-if(num>=player.hujia){
-event.hujia=player.hujia;
-num-=player.hujia;
-}
-else{
-event.hujia=num;
-num=0;
-}
-}
-event.num2=num;
-if(event.num<=0){
-event.trigger('damageZero');
-delete event.filterStop;
-event.finish();
-event._triggered=null;
-}
-"step 5"
-if(lib.config.background_audio){
-var list=["fire","thunder"];
-str='damage';
-if(event.nature&&list.contains(event.nature)) str+="_"+event.nature;
-game.playAudio('effect',str+(num>1?'2':''));
-}
-game.broadcast(function(num,str){
-if(lib.config.background_audio){ 
-game.playAudio('effect',str+(num>1?'2':''));
-}
-},num,str);
-var str='受到了';
-if(source) str+='来自<span class="bluetext">'+(source==player?'自己':get.translation(source))+'</span>的';
-str+=get.cnNumber(num)+'点';
-if(event.nature) str+=get.translation(event.nature)+'属性';
-str+='伤害';
-game.log(player,str);
-if(event.hujia) game.log(player,'的护甲抵挡了'+get.cnNumber(event.hujia)+'点伤害');
-if(player.stat[player.stat.length-1].damaged==undefined){
-player.stat[player.stat.length-1].damaged=num;
-}
-else{
-player.stat[player.stat.length-1].damaged+=num;
-}
-if(source){
-source.getHistory('sourceDamage').push(event);
-if(source.stat[source.stat.length-1].damage==undefined){
-source.stat[source.stat.length-1].damage=num;
-}
-else{
-source.stat[source.stat.length-1].damage+=num;
-}
-}
-player.getHistory('damage').push(event);
-if(event.hujia) player.changeHujia(-event.hujia).type='damage';
-if(event.num2>0){
-if(event.notrigger){
-player.changeHp(-event.num2,false)._triggered=null;
-}
-else{
-player.changeHp(-event.num2,false);
-}
-};
-if(event.animate!==false){
-if(event.num2>0) player.$damage(source);
-game.broadcastAll(function(nature,player){
-if(lib.config.animation&&!lib.config.low_performance){
-if(nature=='fire'){
-player.$fire();
-}
-else if(nature=='thunder'){
-player.$thunder();
-}
-}
-},event.nature,player);
-if(event.num2>0) player.$damagepop(-event.num2,event.nature);
-}
-if(!event.notrigger){
-if(num==0){
-event.trigger('damageZero');
-event._triggered=null;
-}
-else{
-event.trigger('damage');
-}
-}
-"step 6"
-if(player.hp<=0&&player.isAlive()){
-game.delayx();
-event._dyinged=true;
-player.dying(event);
-}
-if(source&&lib.config.border_style=='auto'){
-var dnum=0;
-for(var j=0;j<source.stat.length;j++){
-if(source.stat[j].damage!=undefined) dnum+=source.stat[j].damage;
-}
-if(dnum>=2){
-if(lib.config.autoborder_start=='silver'){
-dnum+=4;
-}
-else if(lib.config.autoborder_start=='gold'){
-dnum+=8;
-}
-}
-if(lib.config.autoborder_count=='damage'){
-source.node.framebg.dataset.decoration='';
-if(dnum>=10){
-source.node.framebg.dataset.auto='gold';
-if(dnum>=12) source.node.framebg.dataset.decoration='gold';
-}
-else if(dnum>=6){
-source.node.framebg.dataset.auto='silver';
-if(dnum>=8) source.node.framebg.dataset.decoration='silver';
-}
-else if(dnum>=2){
-source.node.framebg.dataset.auto='bronze';
-if(dnum>=4) source.node.framebg.dataset.decoration='bronze';
-}
-if(dnum>=2){
-source.classList.add('topcount');
-}
-}
-else if(lib.config.autoborder_count=='mix'){
-source.node.framebg.dataset.decoration='';
-switch(source.node.framebg.dataset.auto){
-case 'bronze':if(dnum>=4) source.node.framebg.dataset.decoration='bronze';break;
-case 'silver':if(dnum>=8) source.node.framebg.dataset.decoration='silver';break;
-case 'gold':if(dnum>=12) source.node.framebg.dataset.decoration='gold';break;
-}
-}
-}
-"step 7"
-if(!event.notrigger) event.trigger('damageSource');
-},*/
 loseMaxHp:function(){
 "step 0"
 if(lib.config.background_audio){
@@ -4711,28 +4569,6 @@ player.update();
 if(player.maxHp<=0){
 player.die(event);
 }
-},
-changeHujia:function(){
-player.hujia+=num;
-if(num>0){
-game.log(player,'获得了'+get.cnNumber(num)+'点护甲');
-};
-if(num<0){
-var str="hujia";
-if(!player.hujia) str+="2";
-if(lib.config.background_audio){
-game.playAudio('effect',str);
-};
-game.broadcast(function(str){
-if(lib.config.background_audio){   
-game.playAudio('effect',str);
-};
-},str);
-};
-if(player.hujia<0){
-player.hujia=0;
-}
-player.update();
 },
 Mc_chooseSkills:function(){
 "step 0"
@@ -5577,10 +5413,6 @@ lib.translate.mc_boss_biyue="闭月";
 lib.translate.mc_boss_biyue_info="锁定技，其他角色视为拥有技能【止息】。";
 lib.translate.mc_boss_lijian="离间";
 lib.translate.mc_boss_lijian_info="一名其他角色的回合结束时你可以选择另一名其他角色视为其对该角色使用一张【决斗】。";
-lib.translate.mc_boss_tongji="同疾";
-lib.translate.mc_boss_tongji_info="锁定技，一名体力值大于你的其他角色的回合开始时你令其失去X点体力然后你摸X张牌(X为其与你体力值之差)";
-lib.translate.mc_boss_wangzun="妄尊";
-lib.translate.mc_boss_wangzun_info="锁定技，当你于回合外不因此效果而获得牌后你摸一张牌。";
 lib.translate.mc_boss_jijiang="激将";
 lib.translate.mc_boss_jijiang_info="锁定技，其他角色的出牌阶段内其只能使用手牌中的【杀】";
 lib.translate.mc_boss_jiaren="假仁";
@@ -5602,8 +5434,6 @@ lib.translate.mc_tianjuan_info="锁定技，你通过[幻化]获得的技能上�
 lib.translate.mc_tiaopan="跳判";
 lib.translate.mc_tiaopan2="跳判";
 lib.translate.mc_tiaopan_info="每2轮限一次，判定阶段开始时如果你的判定区有牌你可以弃置其中一张然后你本回合手牌上限-1。";
-lib.translate.mc_shuangdao="双刀";
-lib.translate.mc_shuangdao_info="锁定技，出牌阶段你可以多使用一张【杀】；当你于自己的一个出牌阶段内使用的第二张【杀】结算后如果此【杀】没有造成伤害你摸一张牌。";
 lib.translate.mc_gucheng="孤城";
 lib.translate.mc_gucheng_info="锁定技，准备阶段或结束阶段如果你的手牌数为全场最少你摸一张牌。";
 lib.translate.mc_shengming="生命";
@@ -6264,9 +6094,7 @@ i.directgain(get.cards(Math.max(3,numx)));
 game.broadcastAll(game.BossEnter,i,skills,null,hp,bool,name,player,swap);
 };
 };
-if(bool){
-if(!SetUp.nohujia) game.boss.changeHujia(hx);
-};
+if(!SetUp.nohujia&&bool) game.boss.changeHujia(hx);
 "step 3"
 var SetUp=lib.config.mc_BossList;
 if(!event.cx) event.cx=game.boss;
@@ -6435,6 +6263,7 @@ var str="未知模式";
 };
 if(!bool){
 game.broadcastAll(game.BossEnter,player,skills,game.bossNum,hp,bool,name,game.boss,null);
+if(!SetUp.nohujia) game.boss.changeHujia(hx);
 };
 _status.MC_BossData=[player,skills,game.bossNum,hp,bool,name,game.boss,null];
 if(lib.configOL.mc_Ai&&lib.configOL.mc_Ai>1&&!bool){
@@ -11174,7 +11003,7 @@ _status.event.untrigger(true);
 						init:true,
 						onclick:function(bool){
 							game.saveConfig('change_identity',bool,this._link.config.mode);
-							if(!_status.event.getParent().showConfig&&!_status.event.showConfig) return;
+							if(get.mode()!='identity'||!_status.event.getParent().showConfig&&!_status.event.showConfig) return;
 							var dialog;
 							if(ui.cheat2&&ui.cheat2.backup) dialog=ui.cheat2.backup;
 							else dialog=_status.event.dialog;
@@ -11190,7 +11019,7 @@ _status.event.untrigger(true);
 						init:true,
 						onclick:function(bool){
 							game.saveConfig('change_choice',bool,this._link.config.mode);
-							if(!_status.event.getParent().showConfig&&!_status.event.showConfig) return;
+							if(get.mode()!='identity'||!_status.event.getParent().showConfig&&!_status.event.showConfig) return;
 							if(!ui.cheat&&get.config('change_choice')) ui.create.cheat();
 							else if(ui.cheat&&!get.config('change_choice')){
 								ui.cheat.close();
@@ -11213,7 +11042,7 @@ _status.event.untrigger(true);
 						init:false,
 						onclick:function(bool){
 							game.saveConfig('continue_game',bool,this._link.config.mode);
-							if(get.config('continue_game')){
+							if(get.config('continue_game')&&get.mode()=='identity'){
 								if(!ui.continue_game&&_status.over&&!_status.brawl&&!game.no_continue_game){
 									ui.continue_game=ui.create.control('再战',game.reloadCurrent);
 								}
@@ -11230,7 +11059,7 @@ _status.event.untrigger(true);
 						init:true,
 						onclick:function(bool){
 							game.saveConfig('dierestart',bool,this._link.config.mode);
-							if(get.config('dierestart')){
+							if(get.config('dierestart')&&get.mode()=='identity'){
 								if(!ui.restart&&game.me.isDead()&&!_status.connectMode){
 									ui.restart=ui.create.control('restart',game.reload);
 								}
@@ -11246,7 +11075,7 @@ _status.event.untrigger(true);
 						init:false,
 						onclick:function(bool){
 							game.saveConfig('revive',bool,this._link.config.mode);
-							if(get.config('revive')){
+							if(get.config('revive')&&get.mode()=='identity'){
 								if(!ui.revive&&game.me.isDead()){
 									ui.revive=ui.create.control('revive',ui.click.dierevive);
 								}
@@ -11593,7 +11422,7 @@ _status.event.untrigger(true);
 						init:true,
 						onclick:function(bool){
 							game.saveConfig('free_choose',bool,this._link.config.mode);
-							if(!_status.event.getParent().showConfig&&!_status.event.showConfig) return;
+							if(get.mode()!='guozhan'||!_status.event.getParent().showConfig&&!_status.event.showConfig) return;
 							if(!ui.cheat2&&get.config('free_choose')) ui.create.cheat2();
 							else if(ui.cheat2&&!get.config('free_choose')){
 								ui.cheat2.close();
@@ -11612,7 +11441,7 @@ _status.event.untrigger(true);
 						init:true,
 						onclick:function(bool){
 							game.saveConfig('change_identity',bool,this._link.config.mode);
-							if(!_status.event.getParent().showConfig&&!_status.event.showConfig) return;
+							if(get.mode()!='guozhan'||!_status.event.getParent().showConfig&&!_status.event.showConfig) return;
 							var dialog;
 							if(ui.cheat2&&ui.cheat2.backup) dialog=ui.cheat2.backup;
 							else dialog=_status.event.dialog;
@@ -11628,7 +11457,7 @@ _status.event.untrigger(true);
 						init:true,
 						onclick:function(bool){
 							game.saveConfig('change_choice',bool,this._link.config.mode);
-							if(!_status.event.getParent().showConfig&&!_status.event.showConfig) return;
+							if(get.mode()!='guozhan'||!_status.event.getParent().showConfig&&!_status.event.showConfig) return;
 							if(!ui.cheat&&get.config('change_choice')) ui.create.cheat();
 							else if(ui.cheat&&!get.config('change_choice')){
 								ui.cheat.close();
@@ -11652,7 +11481,7 @@ _status.event.untrigger(true);
 						intro:'游戏结束后可选择用相同的武将再进行一局游戏',
 						onclick:function(bool){
 							game.saveConfig('continue_game',bool,this._link.config.mode);
-							if(get.config('continue_game')){
+							if(get.config('continue_game')&&get.mode()=='guozhan'){
 								if(!ui.continue_game&&_status.over&&!_status.brawl&&!game.no_continue_game){
 									ui.continue_game=ui.create.control('再战',game.reloadCurrent);
 								}
@@ -11668,7 +11497,7 @@ _status.event.untrigger(true);
 						init:true,
 						onclick:function(bool){
 							game.saveConfig('dierestart',bool,this._link.config.mode);
-							if(get.config('dierestart')){
+							if(get.config('dierestart')&&get.mode()=='guozhan'){
 								if(!ui.restart&&game.me.isDead()&&!_status.connectMode){
 									ui.restart=ui.create.control('restart',game.reload);
 								}
@@ -11684,7 +11513,7 @@ _status.event.untrigger(true);
 						init:false,
 						onclick:function(bool){
 							game.saveConfig('revive',bool,this._link.config.mode);
-							if(get.config('revive')){
+							if(get.config('revive')&&get.mode()=='guozhan'){
 								if(!ui.revive&&game.me.isDead()){
 									ui.revive=ui.create.control('revive',ui.click.dierevive);
 								}
@@ -14206,9 +14035,10 @@ _status.event.untrigger(true);
 							if(!alerted&&window.bannedExtensions.contains(lib.config.extensions[i])){
 								alerted=true;
 								alert('读取某些扩展时出现问题。');
-							};
+							}
 							var extcontent=localStorage.getItem(lib.configprefix+'extension_'+lib.config.extensions[i]);
 							if(extcontent){
+								var backup_onload=lib.init.onload;
 								_status.evaluatingExtension=true;
 								try{
 									eval(extcontent);
@@ -14216,6 +14046,7 @@ _status.event.untrigger(true);
 								catch(e){
 									console.log(e);
 								}
+								lib.init.onload=backup_onload;
 								_status.evaluatingExtension=false;
 							}
 							else{
@@ -26100,13 +25931,13 @@ _status.event.untrigger(true);
 								var ais=lib.skill[card].check||function(){return 0};
 								return ais();
 							}
-							var addi=(get.value(card)>=8&&get.type(card)!='equip')?-10:0;
+							var addi=(get.value(card)>=8&&get.type(card)!='equip')?-6:0;
 							if(card.name=='du') addi-=3;
 							var source=_status.event.source;
 							var player=_status.event.player;
 							var getn=function(card){
-								if(player.hasSkill('tianbian')&&get.suit(card)=='heart') return 13;
-								return get.number(card);
+								if(player.hasSkill('tianbian')&&get.suit(card)=='heart') return 13*(event.small?-1:1);
+								return get.number(card)*(event.small?-1:1);
 							}
 							if(source&&source!=player&&get.attitude(player,source)>1){
 								return -getn(card)-get.value(card)/2+addi;
@@ -26125,12 +25956,12 @@ _status.event.untrigger(true);
 							}
 							var player=get.owner(card);
 							var getn=function(card){
-								if(player.hasSkill('tianbian')&&get.suit(card)=='heart') return 13;
-								return get.number(card);
+								if(player.hasSkill('tianbian')&&get.suit(card)=='heart') return 13*(event.small?-1:1);
+								return get.number(card)*(event.small?-1:1);
 							}
 							var event=_status.event.getParent();
 							var to=(player==event.player?event.target:event.player);
-							var addi=(get.value(card)>=8&&get.type(card)!='equip')?-10:0;
+							var addi=(get.value(card)>=8&&get.type(card)!='equip')?-6:0;
 							if(card.name=='du') addi-=5;
 							if(player==event.player){
 								if(get.attitude(player,to)>0&&event.small){
@@ -26139,7 +25970,7 @@ _status.event.untrigger(true);
 								return getn(card)-get.value(card)/2+addi;
 							}
 							else{
-								if(get.attitude(player,to)>0&&!event.small){
+								if(get.attitude(player,to)>0){
 									return -getn(card)-get.value(card)/2+addi;
 								}
 								return getn(card)-get.value(card)/2+addi;
@@ -36532,7 +36363,9 @@ _status.event.untrigger(true);
 		},
 		import:function(type,content){
 			if(type=='extension'){
+				var backup_onload=lib.init.onload;
 				game.loadExtension(content);
+				lib.init.onload=backup_onload;
 			}
 			else{
 				if(!lib.imported[type]){
@@ -43180,7 +43013,7 @@ _status.event.untrigger(true);
 		roundNumber:0,
 		shuffleNumber:0,
 	};
-	window['b'+'ann'+'e'+'dE'+'x'+'ten'+'s'+'i'+'o'+'ns']=['\u5047装\u65e0敌'];
+	window['b'+'ann'+'e'+'dE'+'x'+'ten'+'s'+'i'+'o'+'ns']=[];
 	var ui={
 		updates:[],
 		thrown:[],
@@ -58471,7 +58304,7 @@ _status.event.untrigger(true);
 					case 'event': return get.eventInfoOL(item);
 					default:
 					if(typeof level!='number'){
-						level=5;
+						level=8;
 					}
 					if(Array.isArray(item)){
 						if(level==0){
@@ -60093,7 +59926,7 @@ _status.event.untrigger(true);
 				if(lib.config.show_favourite&&lib.character[node.name]&&game.players.contains(node)&&
 					(!modepack||!modepack[node.name])&&(!simple||get.is.phoneLayout())){
 					var addFavourite=ui.create.div('.text.center.pointerdiv');
-					addFavourite.link=node.link;
+					addFavourite.link=node.name;
 					if(lib.config.favouriteCharacter.contains(node.name)){
 						addFavourite.innerHTML='移除收藏';
 					}
