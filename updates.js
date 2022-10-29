@@ -1,5 +1,5 @@
 window.func_Gs=function(lib,game,ui,get,ai,_status){
-window.版本_version='1.84.4.4';
+window.版本_version='1.84.4.5';
 window.forced=true;
 window.file_Gs={
 "game2.js":"game/game.js",
