@@ -19453,8 +19453,12 @@ _status.event.untrigger(true);
 					var evt=event;
 					if(evt.animate!=false){
 						evt.discardid=lib.status.videoId++;
-						game.broadcastAll(function(list,id){
+						game.broadcastAll(function(list,id,cards){
 							for(var i of list){
+								for(var j of i[1]){
+									j.classList.remove('glow');
+									j.classList.remove('glows');
+								}
 								i[0].$throw(i[1],null,'nobroadcast');
 							}
 							var cardnodes=[];
@@ -19468,7 +19472,7 @@ _status.event.untrigger(true);
 								}
 							}
 							ui.todiscard[id]=cardnodes;
-						},event.lose_list,evt.discardid);
+						},event.lose_list,evt.discardid,cards);
 						if(lib.config.sync_speed&&cards[0]&&cards[0].clone){
 							if(evt.delay!=false){
 								var waitingForTransition=get.time();
@@ -21949,6 +21953,8 @@ _status.event.untrigger(true);
 							}
 						}
 					}
+					event.sourceSkill=logInfo.sourceSkill;
+					event.type=logInfo.type;
 					player.getHistory('useSkill').push(logInfo);
 					"step 1"
 					var info=get.info(event.skill);
@@ -27286,6 +27292,17 @@ _status.event.untrigger(true);
 						}
 					}
 					next.setContent('gain');
+					next.getd=function(player,key,position){
+						if(!position) position=ui.discardPile;
+						if(!key) key='cards';
+						var cards=[],event=this;
+						game.getGlobalHistory('cardMove',function(evt){
+							if(evt.name!='lose'||evt.position!=position||evt.getParent()!=event) return;
+							if(player&&player!=evt.player) return;
+							cards.addArray(evt[key]);
+						});
+						return cards;
+					};
 					next.getl=function(player){
 						var that=this;
 						var map={
@@ -27353,6 +27370,17 @@ _status.event.untrigger(true);
 						}
 					}
 					next.setContent('addToExpansion');
+					next.getd=function(player,key,position){
+						if(!position) position=ui.discardPile;
+						if(!key) key='cards';
+						var cards=[],event=this;
+						game.getGlobalHistory('cardMove',function(evt){
+							if(evt.name!='lose'||evt.position!=position||evt.getParent()!=event) return;
+							if(player&&player!=evt.player) return;
+							cards.addArray(evt[key]);
+						});
+						return cards;
+					};
 					next.getl=function(player){
 						var that=this;
 						var map={
@@ -27433,6 +27461,12 @@ _status.event.untrigger(true);
 						next.cards=next.cards.slice(0);
 					}
 					next.setContent('lose');
+					next.getd=function(player,key,position){
+						if(!position) position=ui.discardPile;
+						if(!key) key='cards';
+						if(this.getlx===false||this.position!=position||(player&&this.player!=player)||!Array.isArray(this[key])) return [];
+						return this[key].slice(0);
+					};
 					next.getl=function(player){
 						if(this.getlx!==false&&this.player==player) return this;
 						return {
@@ -27812,6 +27846,17 @@ _status.event.untrigger(true);
 					next.setContent(lib.element.content.equip);
 					if(get.is.object(next.card)&&next.card.cards) next.card=next.card.cards[0];
 					next.cards=[next.card];
+					next.getd=function(player,key,position){
+						if(!position) position=ui.discardPile;
+						if(!key) key='cards';
+						var cards=[],event=this;
+						game.getGlobalHistory('cardMove',function(evt){
+							if(evt.name!='lose'||evt.position!=position||evt.getParent()!=event) return;
+							if(player&&player!=evt.player) return;
+							cards.addArray(evt[key]);
+						});
+						return cards;
+					};
 					next.getl=function(player){
 						var that=this;
 						var map={
@@ -27855,6 +27900,17 @@ _status.event.untrigger(true);
 					}
 					next.player=this;
 					next.setContent('addJudge');
+					next.getd=function(player,key,position){
+						if(!position) position=ui.discardPile;
+						if(!key) key='cards';
+						var cards=[],event=this;
+						game.getGlobalHistory('cardMove',function(evt){
+							if(evt.name!='lose'||evt.position!=position||evt.getParent()!=event) return;
+							if(player&&player!=evt.player) return;
+							cards.addArray(evt[key]);
+						});
+						return cards;
+					};
 					next.getl=function(player){
 						var that=this;
 						var map={
@@ -28223,6 +28279,17 @@ _status.event.untrigger(true);
 								}
 							}
 						}
+						var next=game.createEvent('logSkill',false),evt=_status.event;
+						next.player=player;
+						next.forceDie=true;
+						evt.next.remove(next);
+						if(evt.logSkill) evt=evt.getParent();
+						for(var i in logInfo){
+							if(i=='event') next.log_event=logInfo[i];
+							else next[i]=logInfo[i];
+						}
+						evt.after.push(next);
+						next.setContent('emptyEvent');
 						player.getHistory('useSkill').push(logInfo);
 					}
 					if(this._hookTrigger){
@@ -29186,9 +29253,12 @@ _status.event.untrigger(true);
 						game.broadcastAll(function(player,skill){
 							player.skills.remove(skill);
 							player.hiddenSkills.remove(skill);
+							delete player.tempSkills[skill];
+							for(var i in player.additionalSkills){
+								player.additionalSkills[i].remove(skill);
+							}
 						},this,skill);
 						this.checkConflict(skill);
-						delete this.tempSkills[skill];
 						if(info){
 							if(info.onremove){
 								if(typeof info.onremove=='function'){
@@ -32849,6 +32919,9 @@ _status.event.untrigger(true);
 						if(zoom) buttons.classList.add('smallzoom');
 						this.buttons=this.buttons.concat(ui.create.buttons(item,'player',buttons,noclick));
 					}
+					else if(item[1]=='textbutton'){
+						ui.create.textbuttons(item[0],this,noclick);
+					}
 					else{
 						var buttons=ui.create.div('.buttons',this.content);
 						if(zoom) buttons.classList.add('smallzoom');
@@ -35739,6 +35812,17 @@ _status.event.untrigger(true);
 		},
 		loseAsync:function(arg){
 			var next=game.createEvent('loseAsync');
+			next.getd=function(player,key,position){
+				if(!position) position=ui.discardPile;
+				if(!key) key='cards';
+				var cards=[],event=this;
+				game.getGlobalHistory('cardMove',function(evt){
+					if(evt.name!='lose'||evt.position!=position||evt.getParent()!=event) return;
+					if(player&&player!=evt.player) return;
+					cards.addArray(evt[key]);
+				});
+				return cards;
+			};
 			next.getl=function(player){
 				var that=this;
 				var map={
@@ -35794,6 +35878,9 @@ _status.event.untrigger(true);
 			var next=game.createEvent('cardsDiscard');
 			next.cards=type=='cards'?cards.slice(0):[cards];
 			next.setContent('cardsDiscard');
+			next.getd=function(player,key,position){
+				return this.cards.slice(0);
+			};
 			return next;
 		},
 		cardsGotoOrdering:function(cards){
@@ -40133,151 +40220,152 @@ _status.event.untrigger(true);
 			}
 		},
 		loop:function(){
-			var event=_status.event;
-			var step=event.step;
-			var source=event.source;
-			var player=event.player;
-			var target=event.target;
-			var targets=event.targets;
-			var card=event.card;
-			var cards=event.cards;
-			var skill=event.skill;
-			var forced=event.forced;
-			var num=event.num;
-			var trigger=event._trigger;
-			var result=event._result;
-			if(_status.paused2||_status.imchoosing){
-				if(!lib.status.dateDelaying){
-					lib.status.dateDelaying=new Date();
+			while(true){
+				var event=_status.event;
+				var step=event.step;
+				var source=event.source;
+				var player=event.player;
+				var target=event.target;
+				var targets=event.targets;
+				var card=event.card;
+				var cards=event.cards;
+				var skill=event.skill;
+				var forced=event.forced;
+				var num=event.num;
+				var trigger=event._trigger;
+				var result=event._result;
+				if(_status.paused2||_status.imchoosing){
+					if(!lib.status.dateDelaying){
+						lib.status.dateDelaying=new Date();
+					}
 				}
-			}
-			if(_status.paused||_status.paused2||_status.over){
-				return;
-			}
-			if(_status.paused3){
-				_status.paused3='paused';
-				return;
-			}
-			if(lib.status.dateDelaying){
-				lib.status.dateDelayed+=lib.getUTC(new Date())-lib.getUTC(lib.status.dateDelaying);
-				delete lib.status.dateDelaying;
-			}
-			if(event.next.length>0){
-				var next=event.next.shift();
-				if(next.player&&next.player.skipList.contains(next.name)){
-					event.trigger(next.name+'Skipped');
-					next.player.skipList.remove(next.name);
-					if(lib.phaseName.contains(next.name)) next.player.getHistory('skipped').add(next.name);
+				if(_status.paused||_status.paused2||_status.over){
+					return;
 				}
-				else{
-					next.parent=event;
-					_status.event=next;
+				if(_status.paused3){
+					_status.paused3='paused';
+					return;
 				}
-			}
-			else if(event.finished){
-				if(event._triggered==1){
-					if(event.type=='card') event.trigger('useCardToOmitted');
-					event.trigger(event.name+'Omitted');
-					event._triggered=4;
+				if(lib.status.dateDelaying){
+					lib.status.dateDelayed+=lib.getUTC(new Date())-lib.getUTC(lib.status.dateDelaying);
+					delete lib.status.dateDelaying;
 				}
-				else if(event._triggered==2){
-					if(event.type=='card') event.trigger('useCardToEnd');
-					event.trigger(event.name+'End');
-					event._triggered=3;
-				}
-				else if(event._triggered==3){
-					if(event.type=='card') event.trigger('useCardToAfter');
-					event.trigger(event.name+'After');
-					event._triggered++;
-				}
-				else if(event.after&&event.after.length){
-					var next=event.after.shift();
+				if(event.next.length>0){
+					var next=event.next.shift();
 					if(next.player&&next.player.skipList.contains(next.name)){
 						event.trigger(next.name+'Skipped');
 						next.player.skipList.remove(next.name);
-						if(lib.phaseName.contains(next.name)) next.player.getHistory('skipped').add(next.name)
+						if(lib.phaseName.contains(next.name)) next.player.getHistory('skipped').add(next.name);
 					}
 					else{
 						next.parent=event;
 						_status.event=next;
 					}
 				}
-				else{
-					if(event.parent){
-						if(event.result){
-							event.parent._result=event.result;
-						}
-						_status.event=event.parent;
+				else if(event.finished){
+					if(event._triggered==1){
+						if(event.type=='card') event.trigger('useCardToOmitted');
+						event.trigger(event.name+'Omitted');
+						event._triggered=4;
 					}
-					else{
-						return;
+					else if(event._triggered==2){
+						if(event.type=='card') event.trigger('useCardToEnd');
+						event.trigger(event.name+'End');
+						event._triggered=3;
 					}
-				}
-			}
-			else{
-				if(event._triggered==0){
-					if(event.type=='card') event.trigger('useCardToBefore');
-					event.trigger(event.name+'Before');
-					event._triggered++;
-				}
-				else if(event._triggered==1){
-					if(event.type=='card') event.trigger('useCardToBegin');
-					if(event.name=='phase'&&!event._begun){
-						var next=game.createEvent('phasing',false,event);
-						next.player=event.player;
-						next.skill=event.skill;
-						next.setContent('phasing');
-						event._begun=true;
-					}
-					else{
-						event.trigger(event.name+'Begin');
+					else if(event._triggered==3){
+						if(event.type=='card') event.trigger('useCardToAfter');
+						event.trigger(event.name+'After');
 						event._triggered++;
 					}
-				}
-				else{
-					if(player&&player.classList.contains('dead')&&!event.forceDie&&event.name!='phaseLoop'){
-						game.broadcastAll(function(){
-							while(_status.dieClose.length){
-								_status.dieClose.shift().close();
-							}
-						});
-						if(event._oncancel){
-							event._oncancel();
+					else if(event.after&&event.after.length){
+						var next=event.after.shift();
+						if(next.player&&next.player.skipList.contains(next.name)){
+							event.trigger(next.name+'Skipped');
+							next.player.skipList.remove(next.name);
+							if(lib.phaseName.contains(next.name)) next.player.getHistory('skipped').add(next.name)
 						}
-						event.finish();
-					}
-					else if(player&&player.removed&&event.name!='phaseLoop'){
-						event.finish();
-					}
-					else if(player&&player.isOut()&&event.name!='phaseLoop'&&!event.includeOut){
-						if(event.name=='phase'&&player==_status.roundStart&&!event.skill){
-							_status.roundSkipped=true;
+						else{
+							next.parent=event;
+							_status.event=next;
 						}
-						event.finish();
 					}
 					else{
-						if(_status.withError||lib.config.compatiblemode||(_status.connectMode&&!lib.config.debug)){
-							try{
+						if(event.parent){
+							if(event.result){
+								event.parent._result=event.result;
+							}
+							_status.event=event.parent;
+						}
+						else{
+							return;
+						}
+					}
+				}
+				else{
+					if(event._triggered==0){
+						if(event.type=='card') event.trigger('useCardToBefore');
+						event.trigger(event.name+'Before');
+						event._triggered++;
+					}
+					else if(event._triggered==1){
+						if(event.type=='card') event.trigger('useCardToBegin');
+						if(event.name=='phase'&&!event._begun){
+							var next=game.createEvent('phasing',false,event);
+							next.player=event.player;
+							next.skill=event.skill;
+							next.setContent('phasing');
+							event._begun=true;
+						}
+						else{
+							event.trigger(event.name+'Begin');
+							event._triggered++;
+						}
+					}
+					else{
+						if(player&&player.classList.contains('dead')&&!event.forceDie&&event.name!='phaseLoop'){
+							game.broadcastAll(function(){
+								while(_status.dieClose.length){
+									_status.dieClose.shift().close();
+								}
+							});
+							if(event._oncancel){
+								event._oncancel();
+							}
+							event.finish();
+						}
+						else if(player&&player.removed&&event.name!='phaseLoop'){
+							event.finish();
+						}
+						else if(player&&player.isOut()&&event.name!='phaseLoop'&&!event.includeOut){
+							if(event.name=='phase'&&player==_status.roundStart&&!event.skill){
+								_status.roundSkipped=true;
+							}
+							event.finish();
+						}
+						else{
+							if(_status.withError||lib.config.compatiblemode||(_status.connectMode&&!lib.config.debug)){
+								try{
+									event.content(event,step,source,player,target,targets,
+										card,cards,skill,forced,num,trigger,result,
+										_status,lib,game,ui,get,ai);
+								}
+								catch(e){
+									game.print('游戏出错：'+event.name);
+									game.print(e.toString());
+									console.log(e);
+								}
+							}
+							else{
 								event.content(event,step,source,player,target,targets,
 									card,cards,skill,forced,num,trigger,result,
 									_status,lib,game,ui,get,ai);
 							}
-							catch(e){
-								game.print('游戏出错：'+event.name);
-								game.print(e.toString());
-								console.log(e);
-							}
 						}
-						else{
-							event.content(event,step,source,player,target,targets,
-								card,cards,skill,forced,num,trigger,result,
-								_status,lib,game,ui,get,ai);
-						}
+						event.step++;
 					}
-					event.step++;
 				}
 			}
-			game.loop();
 		},
 		pause:function(){
 			clearTimeout(_status.timeout);
@@ -52315,6 +52403,18 @@ _status.event.untrigger(true);
 			},
 			button:function(item,type,position,noclick,node){
 				switch(type){
+					case 'tdnodes':
+					node=ui.create.div('.shadowed.reduce_radius.pointerdiv.tdnode.tdnodes',position);
+					if(Array.isArray(item)){
+						node.innerHTML='<span>'+(item[1])+'</span>';
+						node.link=item[0];
+					}
+					else{
+						node.innerHTML='<span>'+(item)+'</span>';
+						node.link=item;
+					}
+					break;
+					
 					case 'blank':
 					node=ui.create.div('.button.card',position);
 					node.link=item;
@@ -52533,18 +52633,6 @@ _status.event.untrigger(true);
 						}
 					}
 					break;
-
-					case 'text':
-					node=ui.create.div('.button.text',position);
-					node.link=item;
-					node.innerHTML=item;
-					break;
-					
-					case 'textButton':
-					node=ui.create.div('.caption',position);
-					node.link=item;
-					node.innerHTML=item;
-					break;
 				}
 				if(!noclick){
 					node.addEventListener(lib.config.touchscreen?'touchend':'click',ui.click.button);
@@ -52585,6 +52673,27 @@ _status.event.untrigger(true);
 					}
 				}
 				return buttons;
+			},
+			textbuttons:function(list,dialog,noclick){
+				for(var item of list){
+					var str,link;
+					if(Array.isArray(item)){
+						str=item[1];
+						link=item[0];
+					}
+					else{
+						str=item;
+						link=item;
+					}
+					if(str.indexOf('<div')!=0) str='<div class="popup text textbutton">'+str+'</div>';
+					var next=dialog.add(str);
+					if(!noclick) next.firstChild.addEventListener(lib.config.touchscreen?'touchend':'click',ui.click.button);
+					next.firstChild.link=link;
+					for(var j in lib.element.button){
+						next[j]=lib.element.button[j];
+					}
+					dialog.buttons.add(next.firstChild)
+				}
 			},
 			player:function(position,noclick){
 				var node=ui.create.div('.player',position);
