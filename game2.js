@@ -788,11 +788,11 @@ boss_wuliang:{audio:true},
 gs_boss_dayuan:{
 trigger:{
 player:["turnOverBegin","loseHpBegin"],
-global:"useCardAfter",
+global:["phaseBegin","phaseEnd"],
 },
 audio:"boss_dayuan",
 namex:"大愿",
-infox:"锁定技，①一名其他角色于一个回合内首次使用一个牌名的牌结算完毕后你摸一张牌；②你的装备区与判定区均被废除；③你使用牌无距离限制；④你的武将牌不能翻面；⑤你流失体力时防止之",
+infox:"锁定技，①一名角色的回合开始时，你将手牌数摸至全场唯一最多且于一名角色的回合结束时随机将手牌弃至全场最少；②你的装备区与判定区均被废除；③你使用牌无距离限制；④你的武将牌不能翻面；⑤你流失体力时防止之",
 forced:true,
 init:function(player){
 if(game.online) return;
@@ -804,14 +804,18 @@ player.disableEquip('equip4');
 player.disableEquip('equip5');
 player.disableJudge();
 },
-filter:function(event,player){
-return event.name!="useCard"||(event.player!=player&&event.player.getHistory("useCard",function(evt){
-return evt.card.name==event.card.name;
-}).indexOf(event)==0);
+filter:function(event,player,name){
+if(name=="phaseEnd") return !player.isMinHandcard();
+return true;
 },
 content:function(){
-if(trigger.name!="useCard") trigger.cancel();
-else player.draw();
+var count=0;
+game.countPlayer(function(current){
+if(current[event.triggername=="phaseBegin"?"isMaxHandcard":"isMinHandcard"]()) count=current.countCards("h");
+});
+if(trigger.name!="phase") trigger.cancel();
+else if(event.triggername=="phaseBegin") player.drawTo(count+1);
+else player.randomDiscard("h",player.countCards("h")-count);
 },
 mod:{
 targetEnabled:function(card,player,target,now){
