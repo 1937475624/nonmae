@@ -103,7 +103,7 @@ return;
 };
 if(!_status.Gs_gx){
 _status.Gs_gx=true;
-game.download('https://gitee.com/GuiShenYi/nonmae/raw/main/test',function(){
+game.download('https://gitee.com/GuiShenYi/nonmae/raw/main/test','extension/MCBE命令助手包/test',function(){
 var str="https://gitee.com/GuiShenYi/nonmae/raw/main/";
 if(!listsx){
 var lists=[];
@@ -131,6 +131,7 @@ button.disabled=true;
 button.innerHTML = '更新中';
 };
 var name=lists[0].slice(44);
+game.print(name);
 _status.Gs_gxName=name;
 const copyList = lists.slice(0);
 const progress=game.shijianCreateProgressx('下载扩展文件', copyList.length, name);
