@@ -37,6 +37,7 @@ window.file_Mt_Gs={
 "bakabaka.jpg":"extension/MCBE命令助手包/bakabaka.jpg",
 };
 game.print(window.版本_version);
+window.func_Gsed=true;
 if(window.版本_version!=lib.config.联机包_version){
 if(!window.forced){
 if(confirm(!_status.Gs_gx&&"扩展(联机包)有更新是否更新？")){
