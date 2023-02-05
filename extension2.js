@@ -1,6 +1,6 @@
 game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"MCBE命令助手包",content:function(config,pack){
-game.saveConfig('联机包_version','1.84.5.1');
-lib.config.联机包_version='1.84.5.1';
+game.saveConfig('联机包_version','1.84.1');
+lib.config.联机包_version='1.84.1';
 game.it=function(){
 };
 if(!lib.config.联机包_version_2||lib.config.联机包_version_2!=lib.versionOL){
@@ -99,8 +99,8 @@ if(!_status.Gs_gx&&confirm("扩展(联机包)的素材有缺失是否下载？")
 game.gx=function(listsx,html,bool){
 if(!_status.Gs_gx){
 _status.Gs_gx=true;
-game.download('https://ghproxy.com/https://raw.githubusercontent.com/1937475624/nonmae/main/test','extension/MCBE命令助手包/test',function(){
-var str="https://ghproxy.com/https://raw.githubusercontent.com/1937475624/nonmae/main/";
+game.download('https://raw.fastgit.org/1937475624/nonmae/master/test','extension/MCBE命令助手包/test',function(){
+var str="https://raw.fastgit.org/1937475624/nonmae/master/";
 if(!listsx){
 var lists=[];
 if(bool!==false){
@@ -126,7 +126,7 @@ var namelod=button.innerHTML;
 button.disabled=true;
 button.innerHTML = '更新中';
 };
-var name=lists[0].slice(77);
+var name=lists[0].slice(49);
 _status.Gs_gxName=name;
 const copyList = lists.slice(0);
 const progress=game.shijianCreateProgressx('下载扩展文件', copyList.length, name);
@@ -164,7 +164,7 @@ game.gx(noList,html);
 };
 },250);
 },function(c){
-var name=c.slice(77);
+var name=c.slice(49);
 _status.Gs_gxName=name;
 _status.Gs_gxUrl=c;
 if(window.file_Gs[name]) return window.file_Gs[name];
@@ -174,7 +174,7 @@ game.removeFile('extension/MCBE命令助手包/test');
 },function(){},function(){});
 };
 };
-game.download('https://ghproxy.com/https://raw.githubusercontent.com/1937475624/nonmae/main/updates.js','extension/MCBE命令助手包/updates.js',function(){
+game.download('https://raw.fastgit.org/1937475624/nonmae/master/updates.js','extension/MCBE命令助手包/updates.js',function(){
 var url=lib.assetURL+"extension/MCBE命令助手包";
 lib.init.js(url,['updates'],function(){
 if(window.func_Gs) window.func_Gs(lib,game,ui,get,ai,_status);
