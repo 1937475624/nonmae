@@ -4897,7 +4897,7 @@ return num;
 };
 game.Mc_getList={
 modetrans:function(config,server,bool){
-if(config.mc_hh&&!bool&&(config.mode=='identity'||config.mode=='single')){
+if(config&&config.mc_hh&&!bool&&(config.mode=='identity'||config.mode=='single')){
 if(!config.mc_Boss||config.mode=='single'){
 if(!server) server=null;
 var str=get.modetrans(config,server,true);
@@ -5671,6 +5671,21 @@ for(var z in list) list[z]=list[z]+".mp3";
 _status.Audio_hh_url[i]=list;
 };
 };
+lib.skill._skillAudio_mc_hh={
+trigger:{player:["respondBefore","useCardBefore"]},
+filter:function(event,player){
+return event.skill&&lib.skill[event.skill].sourceSkill&&player.skillsH&&player.skillsH.contains(lib.skill[event.skill].sourceSkill);
+},
+charlotte:true,
+forced:true,
+priority:-900,
+lastDo:true,
+content:function(){
+game.broadcastAll(function(skill,info){
+if(info.audioname2) lib.skill[skill].audioname2=info.audioname2;
+},trigger.skill,lib.skill[lib.skill[event.skill].sourceSkill]);
+},
+};
 lib.skill._MC_hh={
 trigger:{
 global:['roundStart',"gameDrawAfter"],
@@ -5689,6 +5704,7 @@ forced:true,
 direct:true,
 charlotte:true,
 priority:6,
+forceDie:true,
 content:function(){
 "step 0"
 var evt=event.getParent(trigger.name=="enterGame"?4:3);
@@ -5701,6 +5717,7 @@ lib.skill._mc_tfSkill={
 charlotte:true,
 forced:true,
 priority:5,
+forceDie:true,
 trigger:{
 global:"gameDrawBegin",
 },
@@ -5816,6 +5833,7 @@ lib.skill._mc_a={
 charlotte:true,
 forced:true,
 priority:9,
+forceDie:true,
 trigger:{
 global:"gameStart",
 },
@@ -5906,6 +5924,7 @@ charlotte:true,
 forced:true,
 priority:-900,
 lastDo:true,
+forceDie:true,
 trigger:{player:"phaseBefore"},
 content:function(){
 _status.mc_boss_Record=trigger;
@@ -5916,9 +5935,10 @@ charlotte:true,
 forced:true,
 priority:-900,
 lastDo:true,
+forceDie:true,
 mode:['identity'],
 trigger:{
-player:["drawBegin","discardBegin"],
+global:["drawBegin","discardBegin"],
 },
 filter:function(event,player){
 if(!lib.config.mc_Boss) return false;
@@ -5933,6 +5953,7 @@ charlotte:true,
 forced:true,
 priority:-900,
 lastDo:true,
+forceDie:true,
 mode:['identity'],
 trigger:{
 global:"gameDrawBefore",
@@ -5975,6 +5996,7 @@ lib.skill._mc_bossx={
 charlotte:true,
 forced:true,
 priority:8,
+forceDie:true,
 mode:['identity'],
 trigger:{
 player:"dieBefore",
