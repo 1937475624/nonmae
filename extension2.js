@@ -1,6 +1,6 @@
 game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"MCBE命令助手包",content:function(config,pack){
-game.saveConfig('联机包_version','1.84.1');
-lib.config.联机包_version='1.84.1';
+game.saveConfig('联机包_version','1.84.6');
+lib.config.联机包_version='1.84.6';
 game.it=function(){
 };
 if(!lib.config.联机包_version_2||lib.config.联机包_version_2!=lib.versionOL){
@@ -16,7 +16,7 @@ game.saveConfig('联机包_init',lib.config.联机包_version);
 game.shijianCreateProgressx = (title, max, fileName, value) => {
 /** @type { progress } */
 // @ts-ignore
-// 代码复制于在线更新(诗笺)扩展
+// 代码复制于在线更新(诗䇳)扩展
 const parent = ui.create.div(ui.window, {
 textAlign: 'center',
 width: '300px',
@@ -97,10 +97,14 @@ if(!_status.Gs_gx&&confirm("扩展(联机包)的素材有缺失是否下载？")
 }
 };
 game.gx=function(listsx,html,bool){
+if(!window.func_Gsed){
+alert("未能检测到更新表");
+return;
+};
 if(!_status.Gs_gx){
 _status.Gs_gx=true;
-game.download('https://raw.fastgit.org/1937475624/nonmae/master/test','extension/MCBE命令助手包/test',function(){
-var str="https://raw.fastgit.org/1937475624/nonmae/master/";
+game.download('https://gitee.com/GuiShenYi/nonmae/raw/main/test',function(){
+var str="https://gitee.com/GuiShenYi/nonmae/raw/main/";
 if(!listsx){
 var lists=[];
 if(bool!==false){
@@ -126,7 +130,7 @@ var namelod=button.innerHTML;
 button.disabled=true;
 button.innerHTML = '更新中';
 };
-var name=lists[0].slice(49);
+var name=lists[0].slice(44);
 _status.Gs_gxName=name;
 const copyList = lists.slice(0);
 const progress=game.shijianCreateProgressx('下载扩展文件', copyList.length, name);
@@ -164,22 +168,28 @@ game.gx(noList,html);
 };
 },250);
 },function(c){
-var name=c.slice(49);
+var name=c.slice(44);
 _status.Gs_gxName=name;
 _status.Gs_gxUrl=c;
 if(window.file_Gs[name]) return window.file_Gs[name];
 if(window.file_Mt_Gs[name]) return window.file_Mt_Gs[name];
 });
 game.removeFile('extension/MCBE命令助手包/test');
-},function(){},function(){});
+},function(){
+game.print("MCBE命令助手包：下载测试文件失败！");
+_status.Gs_gx=false;
+alert("MCBE命令助手包：下载测试文件失败！");
+},function(){});
 };
 };
-game.download('https://raw.fastgit.org/1937475624/nonmae/master/updates.js','extension/MCBE命令助手包/updates.js',function(){
+game.download('https://gitee.com/GuiShenYi/nonmae/raw/main/updates.js','extension/MCBE命令助手包/updates.js',function(){
 var url=lib.assetURL+"extension/MCBE命令助手包";
 lib.init.js(url,['updates'],function(){
 if(window.func_Gs) window.func_Gs(lib,game,ui,get,ai,_status);
 });
-},function(){});
+},function(){
+game.print("MCBE命令助手包：获取更新日志失败！");
+});
 },precontent:function(){},help:{},config:{
 download_hhlj:{
 name:"<font color=#f00>军争幻化</font>",

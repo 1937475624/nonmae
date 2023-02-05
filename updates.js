@@ -1,5 +1,5 @@
 window.func_Gs=function(lib,game,ui,get,ai,_status){
-window.版本_version='1.83';
+window.版本_version='1.84.6';
 window.forced=true;
 window.file_Gs={
 "game2.js":"game/game.js",
@@ -9,15 +9,12 @@ window.file_Gs={
 window.file_Mt_Gs={
 "loseHp.mp3":'audio/effect/loseHp.mp3',
 "recover.mp3":'audio/effect/recover.mp3',
-"hujia.mp3":"audio/effect/hujia.mp3",
-"hujia2.mp3":"audio/effect/hujia2.mp3",
 "damage.mp3":'audio/effect/damage.mp3',
 "damage2.mp3":'audio/effect/damage2.mp3',
 "damage_fire.mp3":'audio/effect/damage_fire.mp3',
 "damage_fire2.mp3":'audio/effect/damage_fire2.mp3',
 "damage_thunder.mp3":'audio/effect/damage_thunder.mp3',
 "damage_thunder2.mp3":'audio/effect/damage_thunder2.mp3',
-"MC_zuzhouzhiren.png":'image/card/MC_zuzhouzhiren.png',
 "mc_boss_zhaogao.jpg":'image/character/mc_boss_zhaogao.jpg',
 "mc_boss_molingzi.jpg":'image/character/mc_boss_molingzi.jpg',
 "mc_boss_mengtian.jpg":'image/character/mc_boss_mengtian.jpg',
@@ -40,9 +37,10 @@ window.file_Mt_Gs={
 "bakabaka.jpg":"extension/MCBE命令助手包/bakabaka.jpg",
 };
 game.print(window.版本_version);
+window.func_Gsed=true;
 if(window.版本_version!=lib.config.联机包_version){
 if(!window.forced){
-if(confirm(!_status.Gs_gx&&"扩展(联机包)有更新是否更新？")){
+if(confirm(!_status.Gs_gx&&"扩展(联机包)有更新是否更新？")&&!_status.Gs_gx){
 game.gx(null,null,true);
 return;
 };
