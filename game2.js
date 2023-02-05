@@ -89,13 +89,17 @@ game.Mc_chooseSkills=function(targets){
 var next=game.createEvent('Mc_chooseSkills',false);
 next.player=game.me;
 if(targets) next.targets=targets;
+next.forceDie=true;
 next.setContent("Mc_chooseSkills");
+return next;
 };
 game.Mc_chooseSkills_Lose=function(targets){
 var next=game.createEvent('Mc_chooseSkills_Lose',false);
 next.player=game.me;
+next.forceDie=true;
 if(targets) next.targets=targets;
 next.setContent("Mc_chooseSkills_Lose");
+return next;
 };
 game.BossEnter=function(player,skills,num,hp,draw,name,boss,swap){
 if(player.skillsH) delete player.skillsH;
@@ -5710,7 +5714,7 @@ content:function(){
 var evt=event.getParent(trigger.name=="enterGame"?4:3);
 evt.set("MC_hh",true);
 "step 1"
-game.Mc_chooseSkills();
+game.Mc_chooseSkills().set("forceDie",true);
 },
 }
 lib.skill._mc_tfSkill={
@@ -5941,8 +5945,8 @@ trigger:{
 global:["drawBegin","discardBegin"],
 },
 filter:function(event,player){
-if(!lib.config.mc_Boss) return false;
-return event.getParent().name=="die";
+if(!lib.config.mc_Boss||game.me!=player) return false;
+return event.getParent().name=="die"&&event.getParent().step==5;
 },
 content:function(){
 trigger.cancel();

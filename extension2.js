@@ -1,6 +1,6 @@
 game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"MCBE命令助手包",content:function(config,pack){
-game.saveConfig('联机包_version','1.84.6');
-lib.config.联机包_version='1.84.6';
+game.saveConfig('联机包_version','1.84.6.1');
+lib.config.联机包_version='1.84.6.1';
 game.it=function(){
 };
 if(!lib.config.联机包_version_2||lib.config.联机包_version_2!=lib.versionOL){
@@ -103,8 +103,8 @@ return;
 };
 if(!_status.Gs_gx){
 _status.Gs_gx=true;
-game.download('https://gitee.com/GuiShenYi/nonmae/raw/main/test','extension/MCBE命令助手包/test',function(){
-var str="https://gitee.com/GuiShenYi/nonmae/raw/main/";
+game.download('https://raw.fastgit.org/1937475624/nonmae/main/test',function(){
+var str="https://raw.fastgit.org/1937475624/nonmae/main/";
 if(!listsx){
 var lists=[];
 if(bool!==false){
@@ -130,8 +130,7 @@ var namelod=button.innerHTML;
 button.disabled=true;
 button.innerHTML = '更新中';
 };
-var name=lists[0].slice(44);
-game.print(name);
+var name=lists[0].slice(47);
 _status.Gs_gxName=name;
 const copyList = lists.slice(0);
 const progress=game.shijianCreateProgressx('下载扩展文件', copyList.length, name);
@@ -169,7 +168,7 @@ game.gx(noList,html);
 };
 },250);
 },function(c){
-var name=c.slice(44);
+var name=c.slice(47);
 _status.Gs_gxName=name;
 _status.Gs_gxUrl=c;
 if(window.file_Gs[name]) return window.file_Gs[name];
@@ -183,7 +182,7 @@ alert("MCBE命令助手包：下载测试文件失败！");
 },function(){});
 };
 };
-game.download('https://gitee.com/GuiShenYi/nonmae/raw/main/updates.js','extension/MCBE命令助手包/updates.js',function(){
+game.download('https://raw.fastgit.org/1937475624/nonmae/main/updates.js','extension/MCBE命令助手包/updates.js',function(){
 var url=lib.assetURL+"extension/MCBE命令助手包";
 lib.init.js(url,['updates'],function(){
 if(window.func_Gs) window.func_Gs(lib,game,ui,get,ai,_status);
