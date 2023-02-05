@@ -5676,13 +5676,14 @@ _status.Audio_hh_url[i]=list;
 };
 };
 lib.skill._skillAudio_mc_hh={
-trigger:{player:["respondBefore","useCardBefore"]},
+trigger:{global:["respondBefore","useCardBefore"]},
 filter:function(event,player){
-return event.skill&&lib.skill[event.skill].sourceSkill&&player.skillsH&&player.skillsH.contains(lib.skill[event.skill].sourceSkill);
+return player==game.me&&event.skill&&lib.skill[event.skill].sourceSkill&&player.skillsH&&event.player.skillsH.contains(lib.skill[event.skill].sourceSkill);
 },
 charlotte:true,
 forced:true,
 priority:-900,
+forceDie:true,
 lastDo:true,
 content:function(){
 game.broadcastAll(function(skill,info){
