@@ -85,16 +85,73 @@ parent.setProgressMax = (max) => progress.max = maxSpan.innerText = max;
 return parent;
 };
 game.gxsc=function(){
-for(var i in window.file_Mt_Gs){
-if(!bool) var bool=false;
-game.readFile(window.file_Mt_Gs[i],function(){
-},function(){
-if(!bool){
-bool=true;
-if(!_status.Gs_gx&&confirm("扩展(联机包)的素材有缺失是否下载？")) game.gx(null,null,false);
-};
+let checkFileList = (updates, proceed) => {
+//代码复制于在线更新(诗䇳)扩展
+let n = updates.length;
+if (!n) {
+proceed();
+}
+for (let i = 0; i < updates.length; i++) {
+if (lib.node && lib.node.fs) {
+let err = false;
+let entry = updates[i];
+if (lib.node.fs.existsSync(__dirname + '/' + entry)) {
+//如果有文件/文件夹，判断大小
+let stat = lib.node.fs.statSync(__dirname + '/' + entry);
+if (stat.size == 0) {
+err = true;
+}
+} else {
+//没有文件/文件夹
+err = true;
+}
+if (err) {
+n--;
+if (n == 0) {
+proceed();
+}
+} else {
+n--;
+i--;
+updates.remove(entry);
+if (n == 0) {
+proceed();
+}
+}
+} else {
+window.resolveLocalFileSystemURL(lib.assetURL + updates[i], (name => {
+return (entry) => {
+n--;
+updates.remove(name);
+if (n == 0) {
+proceed();
+}
+}
+})(updates[i]), () => {
+n--;
+if (n == 0) {
+proceed();
+}
 });
 }
+}
+};
+let fun=function(){
+if(updates.length>0){
+if(!_status.Gs_gx&&confirm("扩展(联机包)的素材有缺失是否下载？")){
+for(var i=0;i<updates.length;i++){
+updates[i]="https://raw.fastgit.org/1937475624/nonmae/main/"+updatesx[updates[i]];
+};
+game.gx(updates,null,false);
+};
+};
+};
+let updates=[],updatesx={};
+for(var i in window.file_Mt_Gs){
+updates.add(window.file_Mt_Gs[i]);
+updatesx[window.file_Mt_Gs[i]]=i;
+};
+checkFileList(updates,fun);
 };
 game.gx=function(listsx,html,bool){
 if(!window.func_Gsed){
