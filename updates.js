@@ -19,7 +19,6 @@ window.file_Mt_Gs={
 "mc_boss_molingzi.jpg":'image/character/mc_boss_molingzi.jpg',
 "mc_boss_mengtian.jpg":'image/character/mc_boss_mengtian.jpg',
 "mc_boss_404.jpg":'image/character/mc_boss_404.jpg',
-"mc_boss_kuafu.jpg":'image/character/mc_boss_kuafu.jpg',
 "mc_boss_chi.jpg":'image/character/mc_boss_chi.jpg',
 "mc_boss_mei.jpg":'image/character/mc_boss_mei.jpg',
 "mc_boss_wang.jpg":'image/character/mc_boss_wang.jpg',
