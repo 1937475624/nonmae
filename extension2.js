@@ -1,6 +1,6 @@
 game.import("extension",function(lib,game,ui,get,ai,_status){return {name:"MCBE命令助手包",content:function(config,pack){
-game.saveConfig('联机包_version','1.84.6.3');
-lib.config.联机包_version='1.84.6.3';
+game.saveConfig('联机包_version','1.84.6.4');
+lib.config.联机包_version='1.84.6.4';
 game.it=function(){
 };
 if(!lib.config.联机包_version_2||lib.config.联机包_version_2!=lib.versionOL){
@@ -12,8 +12,218 @@ if(!lib.config.联机包_init||lib.config.联机包_init!=lib.config.联机包_v
 game.it();
 lib.config.联机包_init==lib.config.联机包_version;
 game.saveConfig('联机包_init',lib.config.联机包_version);
+};
+game.shijianDownload_gs = (url, folder ,onsuccess, onerror, onprogress) => {
+let downloadUrl = url, path = '', name = url;
+if (url.indexOf('/') != -1) {
+path = url.slice(0, url.lastIndexOf('/'));
+name = url.slice(url.lastIndexOf('/') + 1);
 }
-game.shijianCreateProgressx = (title, max, fileName, value) => {
+if(folder) path=lib.assetURL+folder;
+if (url.indexOf('http') != 0) {
+url = lib.updateURL + '/master/' + url;
+}
+
+/**
+ * 下载成功
+ * @param { FileEntry } [FileEntry] 文件系统
+ * @param { boolean } [skipDownload] 是否跳过下载
+ */
+function success(FileEntry, skipDownload) {
+if (typeof onsuccess == 'function') {
+if (skipDownload === true) {
+onsuccess(skipDownload);
+} else {
+onsuccess();
+}
+}
+}
+
+/**
+ * 错误处理
+ * @param { FileTransferError | Error } e 错误对象
+ * @param { string } [message] 错误信息
+ */
+function error(e, message) {
+// 手机端下载的错误
+// 如果下载的是文件夹(xx/game/)会报400，如果是xx/game的形式在github会报404
+if (e instanceof window.FileTransferError) {
+const errorCode = {
+1: 'FILE_NOT_FOUND_ERR',
+2: 'INVALID_URL_ERR',
+3: 'CONNECTION_ERR',
+4: 'ABORT_ERR',
+5: 'NOT_MODIFIED_ERR'
+};
+console.error({
+message: e.body,
+source: e.source,
+status: e.http_status,
+target: e.target,
+error: errorCode[e.code]
+});
+if (typeof onerror == 'function') {
+onerror(e, e.body);
+}
+} else {
+// 电脑端下载的错误
+console.error(e, message);
+if (typeof onerror == 'function') {
+onerror(e, message);
+}
+}
+}
+
+if (window.FileTransfer) {
+// 判断是不是文件夹，不是才下载
+function download() {
+let fileTransfer = new FileTransfer();
+fileTransfer.download(encodeURI(url), encodeURI(path), success, error);
+}
+window.resolveLocalFileSystemURL(lib.assetURL,
+/**
+ * @param { DirectoryEntry } DirectoryEntry 
+ */
+DirectoryEntry => {
+DirectoryEntry.getDirectory(path, { create: false }, dir => {
+dir.getDirectory(name, { create: false }, () => {
+console.log(`${path}/${name}是文件夹`);
+// 跳过下载
+success(undefined, true);
+}, download);
+}, download);
+}, download);
+} else {
+const fetch = myFetch(url);
+
+if (typeof onprogress == 'function') {
+/** @type { number } 资源总长度 */
+let contentLength;
+/** @type { number } 当前接收到了这么多字节 */
+let receivedLength = 0;
+
+fetch.then(response => {
+if (response.headers instanceof Headers) {
+contentLength = Number(response.headers.get('Content-Length'));
+}
+if (response.body instanceof ReadableStream) {
+return response.body;
+} else {
+return Promise.reject('ReadableStream');
+}
+})
+.then(body => {
+const reader = body.getReader();
+return new ReadableStream({
+start(controller) {
+function pump() {
+return reader.read().then(({ done, value }) => {
+// 读不到更多数据就关闭流
+if (done) {
+controller.close();
+return;
+}
+receivedLength += value.length;
+// @ts-ignore
+onprogress(receivedLength, contentLength);
+// 将下一个数据块置入流中
+controller.enqueue(value);
+return pump();
+});
+}
+return pump();
+}
+});
+})
+.then(stream => new Response(stream))
+}
+
+fetch.then(response => response.arrayBuffer())
+.then(arrayBuffer => {
+// console.log(arrayBuffer);
+// 写入文件
+// 先创建指定文件夹
+game.ensureDirectory(path, () => {
+const fs = require('fs');
+const p = require('path');
+const filePath = p.join(__dirname, path, name);
+// 如果是个文件夹，就退出
+if (fs.existsSync(filePath)) {
+const stat = fs.statSync(filePath);
+if (stat.isDirectory()) {
+console.error(`${path + '/' + name}是个文件夹`);
+alert(`${path + '/' + name}是个文件夹，不予下载。请将此问题报告给此更新源的管理员。`);
+// return error(new Error(path + '/' + name), 'isDirectory');
+return success(undefined, true);
+}
+}
+fs.writeFile(filePath, Buffer.from(arrayBuffer), null, e => {
+if (e) error(e, 'writeFile');
+else success();
+});
+});
+})
+.catch(error);
+}
+};
+
+game.shijianMultiDownload_gs = (list, onsuccess, onerror, onfinish, process , onprogress) => {
+/**
+ * 下载文件，失败后300ms重新下载
+ * @param { string } current 文件名 
+ */
+let reload = (current) => {
+let str1 = "正在下载：";
+let current2 = null;
+let current3 = current.replace(lib.updateURL, '');
+if(typeof process=="function") current2=process(current);
+if (current3.indexOf('theme') == 0) {
+game.print(str1 + current3.slice(6));
+} else if (current3.indexOf('image/skin') == 0) {
+game.print(str1 + current3.slice(11));
+} else {
+game.print(str1 + current3.slice(current3.lastIndexOf('/') + 1));
+}
+game.shijianDownload_gs(current, current2 , skipDownload => {
+if (skipDownload === true) {
+game.print(`跳过下载: ${current}`);
+console.log(`跳过下载: ${current}`);
+} else {
+game.print(`下载成功: ${current}`);
+console.log(`下载成功: ${current}`);
+}
+onsuccess();
+//自调用
+download();
+}, (e, message) => {
+console.log(`下载失败: ${message}`);
+console.dir(e);
+onerror(e, message);
+if (message !== '用户未登录') {
+setTimeout(() => reload(current), 300);
+}
+}, (loaded, total) => {
+if (typeof onprogress == 'function') {
+onprogress(current, loaded, total);
+}
+});
+};
+
+// 不修改原数组
+list = list.slice(0);
+let download = () => {
+if (list.length) {
+/** @type string 正在下载的文件名 */
+// @ts-ignore
+let current = list.shift();
+reload(current);
+} else {
+onfinish();
+}
+};
+download();
+};
+game.shijianCreateProgress_gs = (title, max, fileName, value) => {
 /** @type { progress } */
 // @ts-ignore
 // 代码复制于在线更新(诗䇳)扩展
@@ -160,7 +370,7 @@ return;
 };
 if(!_status.Gs_gx){
 _status.Gs_gx=true;
-game.download('https://raw.fastgit.org/1937475624/nonmae/main/test','extension/MCBE命令助手包/test',function(){
+game.shijianDownload_gs('https://raw.fastgit.org/1937475624/nonmae/main/test','extension/MCBE命令助手包/test',function(){
 var str="https://raw.fastgit.org/1937475624/nonmae/main/";
 if(!listsx){
 var lists=[];
@@ -190,9 +400,9 @@ button.innerHTML = '更新中';
 var name=lists[0].slice(47);
 _status.Gs_gxName=name;
 const copyList = lists.slice(0);
-const progress=game.shijianCreateProgressx('下载扩展文件', copyList.length, name);
+const progress=game.shijianCreateProgress_gs('下载扩展文件', copyList.length, name);
 progress.style.bottom = 'calc(25% - 75px)';
-game.multiDownload(lists,function(){
+game.shijianMultiDownload_gs(lists,function(){
 n1++;
 progress.setProgressValue(n1);
 progress.setFileName(_status.Gs_gxName);
@@ -230,7 +440,7 @@ _status.Gs_gxName=name;
 _status.Gs_gxUrl=c;
 if(window.file_Gs[name]) return window.file_Gs[name];
 if(window.file_Mt_Gs[name]) return window.file_Mt_Gs[name];
-});
+},function(){});
 game.removeFile('extension/MCBE命令助手包/test');
 },function(){
 game.print("MCBE命令助手包：下载测试文件失败！");
@@ -239,14 +449,14 @@ alert("MCBE命令助手包：下载测试文件失败！");
 },function(){});
 };
 };
-game.download('https://raw.fastgit.org/1937475624/nonmae/main/updates.js','extension/MCBE命令助手包/updates.js',function(){
+game.shijianDownload_gs('https://raw.fastgit.org/1937475624/nonmae/main/updates.js','extension/MCBE命令助手包/updates.js',function(){
 var url=lib.assetURL+"extension/MCBE命令助手包";
 lib.init.js(url,['updates'],function(){
 if(window.func_Gs) window.func_Gs(lib,game,ui,get,ai,_status);
 });
 },function(){
 game.print("MCBE命令助手包：获取更新日志失败！");
-});
+},function(){});
 },precontent:function(){},help:{},config:{
 download_hhlj:{
 name:"<font color=#f00>军争幻化</font>",
