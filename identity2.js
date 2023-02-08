@@ -1769,6 +1769,7 @@ lib.playerOL[i].node.identity.classList.remove('guessing');
 };
 };
 event.Ai=Ai;
+_status.MC_AiList=Ai;
 "step 1"
 event.videoId=lib.status.videoId++;
 var list=[];
