@@ -1769,7 +1769,7 @@ lib.playerOL[i].node.identity.classList.remove('guessing');
 };
 };
 event.Ai=Ai;
-_status.MC_AiList=Ai;
+_status.MC_AiList=Ai.filter((i)=>game.zhu!=i);
 "step 1"
 event.videoId=lib.status.videoId++;
 var list=[];
