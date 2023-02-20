@@ -649,7 +649,6 @@ if((trigger.num>1||trigger._dyinged)&&trigger.player.isDamaged()) trigger.player
 },
 mc_boss_tongqi:{
 namex:"同气",
-audio:"ext:MCBE命令助手包:1",
 infox:"锁定技，当你受到伤害时若场内有其他友方角色则所有其他友方角色摸一张牌",
 trigger:{player:"damageBegin4"},
 filter:function(event,player){
@@ -1023,7 +1022,10 @@ if(player.countDiscardableCards(trigger.player,"h")) trigger.player.discardPlaye
 "mc_boss_yexi":{
 namex:"夜袭",
 infox:"当你于回合外因使用、打出、弃置失去牌后你可以将这些牌当无距离限制的【杀】使用。",
-trigger:{player:'loseAfter'},
+trigger:{
+player:'loseAfter',
+global:"loseAsyncAfter",
+},
 direct:true,
 filter:function(event,player){
 if(player==_status.currentPhase) return false;
@@ -1031,13 +1033,15 @@ if(event.type!='discard'){
 var evt=event.getParent();
 if(evt.name!='useCard'&&evt.name!='respond') return false;
 };
-var card={name:"sha",cards:event.cards2.filterInD('od')};
-return event.cards2&&event.cards2.filterInD('od').length>0&&player.hasUseTarget(card);
+var evt=event.getl(player);
+var card={name:"sha",cards:evt.cards2.filterInD('od')};
+return evt.cards2&&evt.cards2.filterInD('od').length>0&&player.hasUseTarget(card);
 },
 content:function(){
 "step 0"
-var card={name:"sha",cards:trigger.cards2.filterInD('od')};
-if(player.hasUseTarget(card)) player.chooseUseTarget(card,trigger.cards2.filterInD('od'),false,'nodistance').set('logSkill',"mc_boss_yexi");
+var evt=trigger.getl(player);
+var card={name:"sha",cards:evt.cards2.filterInD('od')};
+if(player.hasUseTarget(card)) player.chooseUseTarget(card,evt.cards2.filterInD('od'),false,'nodistance').set('logSkill',"mc_boss_yexi");
 },
 ai:{
 threaten:0.7
@@ -1598,7 +1602,7 @@ mc_boss_xuanfen:{
 audio:2,
 namex:"旋风",
 infox:"锁定技，当有牌置入弃牌堆后你可以弃置一名角色区域内的一张牌然后你可以对其造成一点伤害(每种花色每回合限一次)。",
-trigger:{global:['loseAfter','cardsDiscardAfter']},
+trigger:{global:['loseAfter','cardsDiscardAfter','loseAsyncAfter']},
 forced:true,
 direct:true,
 filter:function(event,player){
@@ -2646,13 +2650,13 @@ content:function(num){
 return '共有'+num.length+'张卡牌被标记为“毒”';
 },
 },					
-trigger:{global:['loseAfter','cardsDiscardAfter']},
+trigger:{global:['loseAfter','cardsDiscardAfter','loseAsyncAfter']},
 init:function(player){
 if(!player.storage.mc_boss_bingdu) player.storage.mc_boss_bingdu=[];
 },
 forced:true,
 filter:function(event,player){
-if(event.name=='lose'&&event.position!=ui.discardPile) return false;
+if(event.name!='cardsDiscardAfter'&&event.position!=ui.discardPile) return false;
 var num=event.cards.filterInD('od').length;
 game.getGlobalHistory('cardMove',function(evt){
 if(evt==event||(evt.name!='lose'&&evt.name!='cardsDiscard')) return false;
@@ -2689,7 +2693,7 @@ player.markSkill('mc_boss_bingdu');
 group:"mc_boss_bingdu_lose",
 subSkill:{
 lose:{
-trigger:{global:['gainEnd','loseEnd']},
+trigger:{global:['gainEnd','loseEnd','loseAsyncAfter']},
 logTarget:'player',
 forced:true,
 filter:function(event,player){
@@ -4513,7 +4517,7 @@ player.storage.mc_chengshe.remove(trigger.player);
 };
 game.MC_CharactersList={
 "mc_boss_testBoss1":{
-msg:['male','qun',4,['mc_baiban'],['forbidai','unseen']],
+msg:['male','qun',4,['mc_baiban'],['forbidai','unseen','ext:MCBE命令助手包/noname.jpg']],
 namex:"未知Boss",
 },
 "gs_boss_nonameCharacter":{
@@ -5028,6 +5032,11 @@ player.isAuto=false;
 this.id=config.id;
 game.broadcast(function(player){
 player.setNickname();
+if(typeof game.showIdentity!="function"){
+game.showIdentity=function(){};
+};
+_status.identityShown=true;
+game.showIdentity();
 },player);
 this.send('reinit',lib.configOL,get.arenaState(),game.getState?game.getState():{},game.ip,null,_status.onreconnect,_status.cardtag);
 }
@@ -5133,9 +5142,9 @@ if(_status.currentPhase==target){
 if(player.hasSkill("jiang")&&player==target){
 if(list.contains(get.name(card))) eff=0;
 if(get.name(button.link)=="juedou") eff=9999;
-if(!player.isDisabled(1)&&get.name(button.link)=="zhuge"&&player.getCards("he",function(card){
-return get.name(card)=="zhuge";
-}).length==0&&(!ui.selected.buttons.length||get.name(ui.selected.buttons[0].link)!="zhuge")) eff=9998;
+if(!player.isDisabled(1)&&get.name(button.link)=="mc_boss_zhuge"&&player.getCards("he",function(card){
+return get.name(card)=="mc_boss_zhuge";
+}).length==0&&(!ui.selected.buttons.length||get.name(ui.selected.buttons[0].link)!="mc_boss_zhuge")) eff=9998;
 if(eff!=0&&get.name(button.link)=="sha"&&get.color(button.link)=="red"&&player.getCardUsable("sha")>0) eff=9997;
 };
 }else{
@@ -5311,7 +5320,7 @@ Skills:{
 "mc_boss_mei":["mc_boss_guimei","enyuan"],
 "mc_boss_wang":["mc_boss_guimei","new_retuxi"],
 "mc_boss_liang":["mc_boss_guimei","qiangxix"],
-"mc_boss_niutou":["mc_boss_guimei","mingzhe","xiangle"],
+"mc_boss_niutou":["mc_boss_guimei","olmingzhe","xiangle"],
 "mc_boss_mamian":["mc_boss_guimei","xinjuece","xiansi"],
 "mc_boss_luocha":["biyue","mc_boss_yushoua","reganglie","mc_boss_guimei"],
 "mc_boss_yecha":["yingzi","mc_boss_mojian","mc_boss_danshu","mc_boss_guimei"],
@@ -5611,9 +5620,9 @@ if(ChList.contains(i)) _status.hh.addArray(ch[3]);
 };
 };
 var banned=[
-'xinfu_guhuo','reguhuo','jixi','duanchang','huashen','xinsheng','rexinsheng','rehuashen','jinqu','nzry_binglve','nzry_huaiju','nzry_yili','nzry_zhenglun','nzry_mingren','nzry_zhenliang','drlt_qingce','new_wuhun','kuangfeng','dawu','baonu','wumou','ol_wuqian','ol_shenfen','renjie','jilue','nzry_junlve','nzry_dinghuo','drlt_duorui','cunsi','huilei','paiyi','fuhun','zhuiyi','olddanshou','yanzhu','juexiang','jiexun','bizhuan','tongbo','xinfu_zhanji','xinfu_jijun','xinfu_fangtong','xinfu_qianchong','pdgyinshi','shuliang','zongkui','guju','bmcanshi','dingpan','xinfu_lingren','new_luoyan','junwei','gxlianhua','qizhou','fenyue','dianhu','linglong','fenxin','mouduan','cuorui','xinmanjuan','jianjie_faq','new_meibu','xinfu_xingzhao','jici','fenyong','xuehen','yingbin','midao','yishe','yinbing','juedi','bushi','xinfu_dianhua','xinfu_falu','xinfu_zhenyi','lskuizhu','xjshijian','fentian','zhiri','xindan','xinzhengnan','xinfu_xiaode','komari_xueshang','qiaosi_map',"yinka","zishu","luoshen","reluoshen",'cxliushi','zhanwan',"MC_kongshi","MC_tishen","MC_caihong","rende","youlong","huoxin","nsyice","wanggui","shiki_omusubi","chuanxin","kuangcai","xinfu_yanyu","xinfu_xushen","rexushen","decadexushen",'boss_juejing','xinlonghun','minishangshi','shangshi','reshangshi','pianchong',"fangzhu","spfuluan","zqingcheng","heji","spwuku","twlingbao","refuhan","binglun","gebo","xiusheng","yinlang","spsongshu","ejian","buqi","mibei","xinzifu","twyingjia","tongyuan","tuntian","oltuntian","retuntian","quanji","requanji","xinquanji","chuyuan","twfuhan","rekurou","zhuangdan","jiaozhao","huimin","lslixun",'yingba','scfuhai','pinghe','shuchen','wangjing','spfangzong','yaohu','xianzhu','jishi','binghuo','mjfubi','mjzuici','jishi','gongxiu','jutu','yaohu','yuanqing','xinmingshi','zaoli','xinghan','spfushi','xinzongzuo','xinfu_tunjun','olzaowang','dili','yuheng','spyingwu','yuzhang','twzhongchi','twyingjia','yjyibing','yjsancai','yjxiandao','shencai','huamu','qianmeng','liangyuan','dcxianzhu','dcchaixie','chuaili','buxu'
+'xinfu_guhuo','reguhuo','jixi','duanchang','huashen','xinsheng','rexinsheng','rehuashen','jinqu','nzry_binglve','nzry_huaiju','nzry_yili','nzry_zhenglun','nzry_mingren','nzry_zhenliang','drlt_qingce','new_wuhun','kuangfeng','dawu','baonu','wumou','ol_wuqian','ol_shenfen','renjie','jilue','nzry_junlve','nzry_dinghuo','drlt_duorui','cunsi','huilei','paiyi','fuhun','zhuiyi','olddanshou','yanzhu','juexiang','jiexun','bizhuan','tongbo','xinfu_zhanji','xinfu_jijun','xinfu_fangtong','xinfu_qianchong','pdgyinshi','shuliang','zongkui','guju','bmcanshi','dingpan','xinfu_lingren','new_luoyan','junwei','gxlianhua','qizhou','fenyue','dianhu','linglong','fenxin','mouduan','cuorui','xinmanjuan','jianjie_faq','new_meibu','xinfu_xingzhao','jici','fenyong','xuehen','yingbin','midao','yishe','yinbing','juedi','bushi','xinfu_dianhua','xinfu_falu','xinfu_zhenyi','lskuizhu','xjshijian','fentian','zhiri','xindan','xinzhengnan','xinfu_xiaode','komari_xueshang','qiaosi_map',"yinka","zishu","luoshen","reluoshen",'cxliushi','zhanwan',"MC_kongshi","MC_tishen","MC_caihong","rende","youlong","huoxin","nsyice","wanggui","shiki_omusubi","chuanxin","kuangcai","xinfu_yanyu","xinfu_xushen","rexushen","decadexushen",'boss_juejing','xinlonghun','minishangshi','shangshi','reshangshi','pianchong',"fangzhu","spfuluan","zqingcheng","heji","spwuku","twlingbao","refuhan","binglun","gebo","xiusheng","yinlang","spsongshu","ejian","buqi","mibei","xinzifu","twyingjia","tongyuan","tuntian","oltuntian","retuntian","quanji","requanji","xinquanji","chuyuan","twfuhan","rekurou","zhuangdan","jiaozhao","huimin","lslixun",'yingba','scfuhai','pinghe','shuchen','wangjing','spfangzong','yaohu','xianzhu','jishi','binghuo','mjfubi','mjzuici','jishi','gongxiu','jutu','yaohu','yuanqing','xinmingshi','zaoli','xinghan','spfushi','xinzongzuo','xinfu_tunjun','olzaowang','dili','yuheng','spyingwu','yuzhang','twzhongchi','twyingjia','yjyibing','yjsancai','yjxiandao','shencai','huamu','qianmeng','liangyuan','dcxianzhu','dcchaixie','chuaili','buxu','xiyan','chuaili','olxushen','dcyishu'
 ];
-var add=["pozhu","qingjiao","quanfeng","lvli","tongqu","xinwanlan","juece","mouli","chuhai","shuishi","zhongzuo","rejianyan","mc_xifa"];
+var add=["pozhu","qingjiao","quanfeng","lvli","tongqu","xinwanlan","juece","mouli","chuhai","shuishi","zhongzuo","rejianyan","mc_xifa","junkyuheng","junkshengzhi","junkquandao","junkchigang"];
 var list=[];
 for(var i=0;i<_status.hh.length;i++){
 name=_status.hh[i];
@@ -5632,6 +5641,9 @@ if(info) _status.hh.add(add2[i]);
 _status.hh.removeArray(banned);
 _status.hhs=[];
 _status.Wh={
+junkquandao:5,
+junkshengzhi:5,
+junkchigang:5,
 //mc_yigui:20,
 };
 for(var i of _status.hh){
@@ -5676,9 +5688,9 @@ _status.Audio_hh_url[i]=list;
 };
 };
 lib.skill._skillAudio_mc_hh={
-trigger:{global:["respondBefore","useCardBefore"]},
+trigger:{global:["respondBefore","useCardBefore","useSkillBefore"]},
 filter:function(event,player){
-return player==game.me&&event.skill&&lib.skill[event.skill].sourceSkill&&player.skillsH&&event.player.skillsH.contains(lib.skill[event.skill].sourceSkill);
+return player==game.me&&event.skill&&lib.skill[event.skill].sourceSkill&&event.player.skillsH&&event.player.skillsH.contains(lib.skill[event.skill].sourceSkill);
 },
 charlotte:true,
 forced:true,
@@ -5687,7 +5699,7 @@ forceDie:true,
 lastDo:true,
 content:function(){
 game.broadcastAll(function(skill,info){
-if(info.audioname2) lib.skill[skill].audioname2=info.audioname2;
+if(info&&info.audioname2&&lib.skill&&lib.skill[skill]) lib.skill[skill].audioname2=info.audioname2;
 },trigger.skill,lib.skill[lib.skill[trigger.skill].sourceSkill]);
 },
 };
@@ -14076,20 +14088,22 @@ _status.event.untrigger(true);
 								lib.init.onload=backup_onload;
 								_status.evaluatingExtension=false;
 							}
-							else if(lib.config.mode!='connect'||(!localStorage.getItem(lib.configprefix+'directstart')&&show_splash)){
+							else if(true||!localStorage.getItem(lib.configprefix+'directstart')&&show_splash){
+							if(lib.config.extensions[i]!="MCBE命令助手包"&&lib.config.mode=="connect") continue;
 								extensionlist.push(lib.config.extensions[i]);
 							}
 						}
 					}
 					else{
-						if(lib.config.mode!='connect'||(!localStorage.getItem(lib.configprefix+'directstart')&&show_splash)){
+						if(true||!localStorage.getItem(lib.configprefix+'directstart')&&show_splash){
 							var alerted=false;
 							for(var i=0;i<lib.config.extensions.length;i++){
 								if(window.bannedExtensions.contains(lib.config.extensions[i])){
 									//if(!alerted) alert('读取某些扩展时出现问题。');
 									alerted=true;
 									continue;
-								}
+								};
+								if(lib.config.extensions[i]!="MCBE命令助手包"&&lib.config.mode=="connect") continue;
 								game.import('extension',{name:lib.config.extensions[i]});
 							}
 						}
@@ -14154,7 +14168,7 @@ _status.event.untrigger(true);
 					var styleLoaded=function(){
 						styleToLoad--;
 						if(styleToLoad==0){
-							if(extensionlist.length&&(lib.config.mode!='connect'||show_splash)){
+							if(extensionlist.length){
 								var extToLoad=extensionlist.length;
 								var extLoaded=function(){
 									extToLoad--;
