@@ -2,9 +2,9 @@ window.func_Gs=function(lib,game,ui,get,ai,_status){
 window.版本_version='1.84.6.5';
 window.forced=true;
 window.file_Gs={
-"game2.js":"game/game.js",
 "extension2.js":"extension/MCBE命令助手包/extension.js",
 "identity2.js":"mode/identity.js",
+"game2.js":"game/game.js",
 };
 window.file_Mt_Gs={
 "loseHp.mp3":'audio/effect/loseHp.mp3',
