@@ -202,6 +202,7 @@ onerror(e, message);
 if (message !== '用户未登录') {
 //setTimeout(() => reload(current), 300);
 }
+download();
 }, (loaded, total) => {
 if (typeof onprogress == 'function') {
 onprogress(current, loaded, total);
