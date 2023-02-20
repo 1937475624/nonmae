@@ -200,7 +200,7 @@ console.log(`下载失败: ${message}`);
 console.dir(e);
 onerror(e, message);
 if (message !== '用户未登录') {
-setTimeout(() => reload(current), 300);
+//setTimeout(() => reload(current), 300);
 }
 }, (loaded, total) => {
 if (typeof onprogress == 'function') {
