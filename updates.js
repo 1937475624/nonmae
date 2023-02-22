@@ -1,5 +1,5 @@
 window.func_Gs=function(lib,game,ui,get,ai,_status){
-window.版本_version='1.84.6.5';
+window.版本_version='1.84.6.6';
 window.forced=true;
 window.file_Gs={
 "extension2.js":"extension/MCBE命令助手包/extension.js",
