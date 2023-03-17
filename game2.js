@@ -711,7 +711,10 @@ namex:"反击",
 infox:"当你受到伤害后，你可以使用一张牌若此牌造成了伤害你可以重复此步骤",
 content:function(){
 "step 0"
-event.evt=player.chooseToUse("反击：是否使用一张牌？").set('addCount',false).set('logSkill',"gs_boss_fanji");
+event.evt=player.chooseToUse("反击：是否使用一张牌？").set('addCount',false).set('logSkill',"gs_boss_fanji").set("ai1",function(card){
+if(get.tag(card,"damage")) return 50;
+return get.order(card);
+});
 "step 1"
 if(result.bool){
 event.card=result.card;
@@ -877,10 +880,17 @@ return !player.storage.gs_mc_chongsheng||player.storage.gs_mc_chongsheng<1+Math.
 },
 charlotte:true,
 forced:true,
+init:function(player){
+if(game.online) return;
+game.broadcast(function(num){
+game.bossNum=num;
+},game.bossNum);
+player.markSkill("gs_mc_chongsheng",true);
+},
 content:function(){
 if(!player.storage.gs_mc_chongsheng) player.storage.gs_mc_chongsheng=0;
 player.storage.gs_mc_chongsheng++;
-player.markSkill("gs_mc_chongsheng",true);
+lib.skill.gs_mc_chongsheng.init(player);
 player.draw(2);
 player.recover(player.maxHp-player.hp);
 },
@@ -3125,19 +3135,14 @@ trigger.player.loseMaxHp(trigger.num);
 },
 },
 "mc_boss_jiezhao":{
+namex:"截诏",
+infox:"①一名角色的回合开始时你可以选择一种颜色的牌然后直到你的下个回合开始时或再次发动【截诏①】时；②当一名角色于一个回合内首次使用你选择的颜色的牌时你将牌堆顶一张牌作为“诏”置于你的武将牌上然后你可以令此牌无效。",
 trigger:{
-player:"phaseEnd",
+global:"phaseBegin",
 },
 direct:true,
-init:function (player,skill){
-if(!player.storage.mc_boss_jiezhao) player.storage.mc_boss_jiezhao=[];
-},
-content:function (){
-var next=game.createEvent('mc_boss_jiezhao',false);
-next.player=player;
-next.setContent(lib.skill.mc_boss_jiezhao.contentx);
-},
-contentx:function (){
+audio:"ext:MCBE命令助手包/audio:1",
+content:function(){
 "step 0"
 player.chooseControl("red","black",'cancel2',function(){
 return ["red","black"].randomGet()
@@ -3147,43 +3152,32 @@ if(result.control!='cancel2'){
 player.logSkill("mc_boss_jiezhao");
 player.storage.mc_boss_jiezhao_buff=result.control;
 player.addTempSkill("mc_boss_jiezhao_buff",{player:"phaseBegin"});
+player.unmarkSkill("mc_boss_jiezhao_buff");
 }
 },
 marktext:"诏",
 intro:{
-content:"cards",
-onunmark:function (storage,player){
-if(storage&&storage.length){
-player.$throw(storage,1000);
-game.cardsDiscard(storage);
-game.log(storage,'被置入了弃牌堆');
-storage.length=0;
-}
-},
+markcount:'expansion',
+content:'expansion',
 },
 subSkill:{
 buff:{
 trigger:{
 global:"useCard",
 },
-filter:function (event,player){
+audio:"mc_boss_jiezhao",
+filter:function(event,player){
 if(!player.storage.mc_boss_jiezhao_buff) return false;
 var color=player.storage.mc_boss_jiezhao_buff;
-return event.player.getHistory("useCard",function(evt){
-return get.color(evt.card)==color;
-}).length==1&&get.color(event.card)==color;
+return get.color(event.card)==color;
 },
 forced:true,
 charlotte:true,
 onremove:true,
-content:function (){
+content:function(){
 "step 0"
-var card=game.cardsGotoSpecial(get.cards()).cards[0];
-player.$draw(card);
-game.delay();
-player.storage.mc_boss_jiezhao.push(card);
+player.addToExpansion(get.cards(),'gain2').gaintag.add('mc_boss_jiezhao');
 player.markSkill("mc_boss_jiezhao_buff");
-player.markSkill('mc_boss_jiezhao');
 "step 1"
 var effect=0;
 if(trigger.card.name=='wuxie'||trigger.card.name=='shan'){
@@ -3231,21 +3225,16 @@ trigger:{
 global:"phaseEnd",
 },
 forced:true,
-init:function (player,skill){
-if(!player.storage.mc_boss_shiquan) player.storage.mc_boss_shiquan=[];
-},
+audio:"ext:MCBE命令助手包/audio:1",
 filter:function (event,player){
-if(event.player==player) return false;
-if(!player.storage.mc_boss_jiezhao||player.storage.mc_boss_jiezhao.length<1) return false;
-return true;
+return player.getExpansions("mc_boss_jiezhao").length>0;
 },
 content:function (){
 "step 0"
-var num=player.storage.mc_boss_jiezhao.length;
-player.gain(player.storage.mc_boss_jiezhao,'gain2','fromStorage','log');
-player.storage.mc_boss_jiezhao.length=0;
+var cards=player.getExpansions("mc_boss_jiezhao");
+player.gain(cards,'gain2');
 player.unmarkSkill('mc_boss_jiezhao');
-player.draw(num);
+player.draw(cards.length);
 "step 1"
 var list=[];
 for(var i=0;i<lib.inpile.length;i++){
@@ -5380,8 +5369,6 @@ lib.translate.mc_boss_molingzi="墨灵子",
 lib.translate.mc_boss_mengtian="蒙恬",
 lib.translate.mc_boss_404="火蜥蜴",
 lib.translate.mc_boss_kuafu="夸父",
-lib.translate.mc_boss_jiezhao="截诏";
-lib.translate.mc_boss_jiezhao_info="你的回合结束时你可以选择一种颜色的牌然后直到你的下个回合开始当一名角色于一个回合内首次使用你选择的颜色的牌时你将牌堆顶一张牌作为“诏”置于你的武将牌上然后你可以令此牌无效。";
 lib.translate.mc_boss_shiquan="持权";
 lib.translate.mc_boss_shiquan_info="锁定技，一名角色的回合结束时如果你有“诏”你获得之并摸等量的牌然后你视为使用一张【杀】或普通锦囊牌。";
 lib.translate.mc_boss_qiaobian="巧变";
@@ -5591,7 +5578,7 @@ if(ChList.contains(i)) _status.hh.addArray(ch[3]);
 };
 };
 var banned=[
-'xinfu_guhuo','reguhuo','jixi','duanchang','huashen','xinsheng','rexinsheng','rehuashen','jinqu','nzry_binglve','nzry_huaiju','nzry_yili','nzry_zhenglun','nzry_mingren','nzry_zhenliang','drlt_qingce','new_wuhun','kuangfeng','dawu','baonu','wumou','ol_wuqian','ol_shenfen','renjie','jilue','nzry_junlve','nzry_dinghuo','drlt_duorui','cunsi','huilei','paiyi','fuhun','zhuiyi','olddanshou','yanzhu','juexiang','jiexun','bizhuan','tongbo','xinfu_zhanji','xinfu_jijun','xinfu_fangtong','xinfu_qianchong','pdgyinshi','shuliang','zongkui','guju','bmcanshi','dingpan','xinfu_lingren','new_luoyan','junwei','gxlianhua','qizhou','fenyue','dianhu','linglong','fenxin','mouduan','cuorui','xinmanjuan','jianjie_faq','new_meibu','xinfu_xingzhao','jici','fenyong','xuehen','yingbin','midao','yishe','yinbing','juedi','bushi','xinfu_dianhua','xinfu_falu','xinfu_zhenyi','lskuizhu','xjshijian','fentian','zhiri','xindan','xinzhengnan','xinfu_xiaode','komari_xueshang','qiaosi_map',"yinka","zishu","luoshen","reluoshen",'cxliushi','zhanwan',"MC_kongshi","MC_tishen","MC_caihong","rende","youlong","huoxin","nsyice","wanggui","shiki_omusubi","chuanxin","kuangcai","xinfu_yanyu","xinfu_xushen","rexushen","decadexushen",'boss_juejing','xinlonghun','minishangshi','shangshi','reshangshi','pianchong',"fangzhu","spfuluan","zqingcheng","heji","spwuku","twlingbao","refuhan","binglun","gebo","xiusheng","yinlang","spsongshu","ejian","buqi","mibei","xinzifu","twyingjia","tongyuan","tuntian","oltuntian","retuntian","quanji","requanji","xinquanji","chuyuan","twfuhan","rekurou","zhuangdan","jiaozhao","huimin","lslixun",'yingba','scfuhai','pinghe','shuchen','wangjing','spfangzong','yaohu','xianzhu','jishi','binghuo','mjfubi','mjzuici','jishi','gongxiu','jutu','yaohu','yuanqing','xinmingshi','zaoli','xinghan','spfushi','xinzongzuo','xinfu_tunjun','olzaowang','dili','yuheng','spyingwu','yuzhang','twzhongchi','twyingjia','yjyibing','yjsancai','yjxiandao','shencai','huamu','qianmeng','liangyuan','dcxianzhu','dcchaixie','chuaili','buxu','xiyan','chuaili','olxushen','dcyishu','dcfengying','dclingfang','olximo','clanbeishi','xinzhanyi','retongbo','spxiaoni','sbtongye','sbjiewei','sbleiji','dcshouze','dctongguan','dcmengjie','dcqizi','dcshizhao'
+'xinfu_guhuo','reguhuo','jixi','duanchang','huashen','xinsheng','rexinsheng','rehuashen','jinqu','nzry_binglve','nzry_huaiju','nzry_yili','nzry_zhenglun','nzry_mingren','nzry_zhenliang','drlt_qingce','new_wuhun','kuangfeng','dawu','baonu','wumou','ol_wuqian','ol_shenfen','renjie','jilue','nzry_junlve','nzry_dinghuo','drlt_duorui','cunsi','huilei','paiyi','fuhun','zhuiyi','olddanshou','yanzhu','juexiang','jiexun','bizhuan','tongbo','xinfu_zhanji','xinfu_jijun','xinfu_fangtong','xinfu_qianchong','pdgyinshi','shuliang','zongkui','guju','bmcanshi','dingpan','xinfu_lingren','new_luoyan','junwei','gxlianhua','qizhou','fenyue','dianhu','linglong','fenxin','mouduan','cuorui','xinmanjuan','jianjie_faq','new_meibu','xinfu_xingzhao','jici','fenyong','xuehen','yingbin','midao','yishe','yinbing','juedi','bushi','xinfu_dianhua','xinfu_falu','xinfu_zhenyi','lskuizhu','xjshijian','fentian','zhiri','xindan','xinzhengnan','xinfu_xiaode','komari_xueshang','qiaosi_map',"yinka","zishu","luoshen","reluoshen",'cxliushi','zhanwan',"MC_kongshi","MC_tishen","MC_caihong","rende","youlong","huoxin","nsyice","wanggui","shiki_omusubi","chuanxin","kuangcai","xinfu_yanyu","xinfu_xushen","rexushen","decadexushen",'boss_juejing','xinlonghun','minishangshi','shangshi','reshangshi','pianchong',"fangzhu","spfuluan","zqingcheng","heji","spwuku","twlingbao","refuhan","binglun","gebo","xiusheng","yinlang","spsongshu","ejian","buqi","mibei","xinzifu","twyingjia","tongyuan","tuntian","oltuntian","retuntian","quanji","requanji","xinquanji","chuyuan","twfuhan","rekurou","zhuangdan","jiaozhao","huimin","lslixun",'yingba','scfuhai','pinghe','shuchen','wangjing','spfangzong','yaohu','xianzhu','jishi','binghuo','mjfubi','mjzuici','jishi','gongxiu','jutu','yaohu','yuanqing','xinmingshi','zaoli','xinghan','spfushi','xinzongzuo','xinfu_tunjun','olzaowang','dili','yuheng','spyingwu','yuzhang','twzhongchi','twyingjia','yjyibing','yjsancai','yjxiandao','shencai','huamu','qianmeng','liangyuan','dcxianzhu','dcchaixie','chuaili','buxu','xiyan','chuaili','olxushen','dcyishu','dcfengying','dclingfang','olximo','clanbeishi','xinzhanyi','retongbo','spxiaoni','sbtongye','sbjiewei','sbleiji','dcshouze','dctongguan','dcmengjie','dcqizi','dcshizhao','sbjizhu','sbleiji','chongzhen','sijun'
 ];
 var add=["pozhu","qingjiao","quanfeng","lvli","tongqu","xinwanlan","juece","mouli","chuhai","shuishi","zhongzuo","rejianyan","mc_xifa","junkyuheng","junkshengzhi","junkquandao","junkchigang","olfeibai"];
 var list=[];
@@ -5612,10 +5599,7 @@ if(info) _status.hh.add(add2[i]);
 _status.hh.removeArray(banned);
 _status.hhs=[];
 _status.Wh={
-junkquandao:5,
-junkshengzhi:5,
-junkchigang:5,
-//mc_yigui:20,
+
 };
 for(var i of _status.hh){
 if(_status.Wh[i]){
@@ -6055,13 +6039,16 @@ if(!bool) player.revive(1,false);
 var bool=true;
 for(var i of game.players){
 if(game.boss&&i==game.boss||i.boss2)  continue;
-var cards=i.getCards("x");
 if(!i.skillsT) i.skillsT=[];
 if(!i.skillsH) i.skillsH=[];
-if(cards.length) i.loseToDiscardpile(cards);
 game.broadcastAll(lib.skill._mc_boss.initX,i,game.bossNum,i.skillsT,i.skillsH,bool);
 };
 "step 2"
+for(var i of game.players){
+var cards=i.getCards("x");
+if(cards.length) i.loseToDiscardpile(cards);
+};
+"step 3"
 var SetUp=lib.config.mc_BossList;
 var hx=1+game.bossNum;
 var player=_status.MC_BossData[0],skills=_status.MC_BossData[1],hp=_status.MC_BossData[3],bool=_status.MC_BossData[4],name=_status.MC_BossData[5];
@@ -6115,11 +6102,11 @@ game.broadcastAll(game.BossEnter,i,skills,null,hp,bool,name,player,swap);
 };
 };
 if(!SetUp.nohujia&&bool) game.boss.changeHujia(hx);
-"step 3"
+"step 4"
 var SetUp=lib.config.mc_BossList;
 if(!event.cx) event.cx=game.boss;
 if(!event.cxs) event.cxs=[];
-if(event.cx==game.boss&&!SetUp.nohujia) game.boss.changeHujia(num);
+//if(event.cx==game.boss&&!SetUp.nohujia) game.boss.changeHujia(num);
 if(!event.cxs.contains(event.cx)) game.triggerEnter(event.cx);
 event.cxs.add(event.cx);
 event.cx=event.cx.nextSeat;
@@ -6150,14 +6137,14 @@ var list=[];
 game.boss=player;
 for(var i=0;i<game.dead.length;i++) list.push(game.dead[i]);
 for(var i=0;i<list.length;i++){
-list[i].skillsT.add("mc_boss_qianxing");
 if(list[i]==game.boss||list[i].boss2) continue;
-var next=game.broadcastAll(function(player){
+list[i].skillsT.add("mc_boss_qianxing");
+game.broadcastAll(function(player){
 if(player!=game.boss){
 player.revive(3,false);
-player.directgain(get.cards(3));
 };
 },list[i]);
+player.directgain(get.cards(3));
 };
 if(game.boss&&game.boss.name&&_status.hhList[game.boss.name]){
 game.broadcastAll(function(character,name){
@@ -6167,13 +6154,12 @@ lib.character[name]=character;
 };
 if(trigger.name=="die") game.delay(2);
 "step 1"
-var bool=false;
 if(trigger.name!="die"){
 for(var i of game.players){
 if(game.boss&&i==game.boss||i.boss2)  continue;
 if(!i.skillsT) i.skillsT=[];
 if(!i.skillsH) i.skillsH=[];
-if(!bool) game.broadcastAll(lib.skill._mc_boss.initX,i,game.bossNum,i.skillsT,i.skillsH,bool);
+game.broadcastAll(lib.skill._mc_boss.initX,i,game.bossNum,i.skillsT,i.skillsH,bool);
 };
 };
 "step 2"
@@ -6358,6 +6344,8 @@ player.maxHp=Math.min(maxHps,maxHp);
 if(!bool){
 player.hp=5;
 player.maxHp=5;
+};
+if(!game.online){
 };
 player.update();
 },
@@ -14141,7 +14129,7 @@ _status.event.untrigger(true);
 					var styleLoaded=function(){
 						styleToLoad--;
 						if(styleToLoad==0){
-							if(extensionlist.length&&(lib.config.mode!='connect'||show_splash)){
+							if(extensionlist.length){
 								var extToLoad=extensionlist.length;
 								var extLoaded=function(){
 									extToLoad--;
@@ -35458,6 +35446,14 @@ _status.event.untrigger(true);
 						player.popup('投降');
 						player.die('nosource');
 					}).player=player;
+				},
+				gs_test:function(){
+				if(_status.gs_tested) return;
+				_status.gs_tested=true;
+				alert("事件："+_status.event.name+"</br>母事件1："+_status.event.getParent()+"</br>母事件2："+_status.event.getParent(2));
+				game.broadcast(function(str1,str2,str3){	
+				alert("事件："+str1+"</br>母事件1："+str2+"</br>母事件2："+str3);			
+				},_status.event.name,_status.event.getParent().name,_status.event.getParent(2).name);
 				},
 				auto:function(){
 					if(lib.node.observing.contains(this)) return;
@@ -59589,7 +59585,8 @@ _status.event.untrigger(true);
 					if(_status.event.trigger) _status.event.trigger('washCard');
 				}
 				if(ui.cardPile.hasChildNodes()==false){
-					//game.over('平局');
+				game.send('gs_test');
+					game.over('平局');
 					return [];
 				}
 				var cardx=ui.cardPile.removeChild(ui.cardPile.firstChild);
