@@ -498,6 +498,18 @@ infox:"厄咒力量的来源",
 },
 };
 game.MC_SkillsList={
+mc_boss_pingkou:{
+audio:false,
+inherit:"pingkou",
+},
+mc_boss_guzheng:{
+audio:false,
+inherit:"guzheng",
+},
+mc_boss_qinzheng:{
+audio:false,
+inherit:"qinzheng",
+},
 mc_tf_fengliang:{
 trigger:{player:"phaseDrawEnd"},
 usable:1,
@@ -815,7 +827,7 @@ gs_boss_ganhua:{
 trigger:{player:"damageEnd"},
 forced:true,
 namex:"感化",
-infox:"锁定技，当你受到其他角色造成的伤害后若此伤害为你本回合内；首次受到伤害，伤害来源摸一张牌；不是首次伤害，伤害来源扣减一点体力上限",
+infox:"锁定技，当你受到其他角色造成的伤害后若此伤害为你本回合内；首次受到伤害，伤害来源与你各摸一张牌；不是首次伤害，伤害来源失去一点体力并弃置所有手牌",
 audio:"boss_wuliang",
 logTarget:"source",
 filter:function(event,player){
@@ -823,8 +835,10 @@ return event.source&&event.source!=player&&event.source.isAlive();
 },
 content:function(){
 var index=player.getHistory("damage").indexOf(trigger);
-if(index>0) trigger.source.loseMaxHp();
-else trigger.source.draw();
+if(index>0){
+trigger.source.loseHp();
+trigger.source.chooseToDiscard("h",true,trigger.source.countCards("h"));
+}else game.asyncDraw([player,trigger.source]);
 },
 },
 boss_wuliang:{audio:true},
@@ -1523,7 +1537,7 @@ player.markSkill('mc_boss_jiang');
 },
 "mc_boss_hunzi":{
 namex:"魂姿",
-infox:"觉醒技，游戏开始时你加X点体力上限回复X点体力然后从幻化技能池获得Y个技能并添加到武将牌上(X为当前关卡数，Y为其他角色数(包括死亡的)*X且至多为10)。",
+infox:"觉醒技，游戏开始时，你加X点体力上限回复X点体力然后从幻化技能池获得Y个技能并添加到武将牌上(X为当前关卡数，Y为其他角色数(包括死亡的)*X且至多为10)。",
 charlotte:true,
 forced:true,
 skillAnimation:true,
@@ -1648,25 +1662,27 @@ if(game.bossNum) return num+Math.floor(game.bossNum/10);
 mc_boss_xuanfen:{
 audio:2,
 namex:"旋风",
-infox:"锁定技，当有牌置入弃牌堆后你可以弃置一名角色区域内的一张牌然后你可以对其造成一点伤害(每种花色每回合限一次)。",
-trigger:{global:['loseAfter','cardsDiscardAfter','loseAsyncAfter']},
+infox:"锁定技，你的回合内，当有牌置入弃牌堆后你可以弃置一名角色区域内的一张牌然后你可以对其造成一点伤害(每种花色每回合限一次)。",
+trigger:{global:['loseAfter','cardsDiscardAfter','loseAsyncAfter','equipAfter']},
 forced:true,
 direct:true,
 filter:function(event,player){
-if(event.name=='lose'&&event.position!=ui.discardPile) return false;
+if(player!=_status.currentPhase) return false;
+var cards=event.getd();
+if(!cards.length) return false;
 var list=[];
-var num=event.cards.length;
-for(var i=0;i<event.cards.length;i++){
-var card=event.cards[i];
-list.add(get.suit(card,(event.cards2&&event.cards2.contains(card))?event.player:false));
+var num=cards.length;
+for(var i=0;i<cards.length;i++){
+var card=cards[i];
+list.add(get.suit(card,false));
 }
 game.getGlobalHistory('cardMove',function(evt){
-if(evt==event||(evt.name!='lose'&&evt.name!='cardsDiscard')) return false;
+if(evt==event||evt.getParent()==event||(evt.name!='lose'&&evt.name!='cardsDiscard')) return false;
 if(evt.name=='lose'&&evt.position!=ui.discardPile) return false;
 num+=evt.cards.length;
 for(var i=0;i<evt.cards.length;i++){
 var card=evt.cards[i];
-list.remove(get.suit(card,(evt.cards2&&evt.cards2.contains(card))?evt.player:false));
+list.remove(get.suit(card,false));
 }
 },event);
 return list.length>0;
@@ -1675,14 +1691,15 @@ content:function(){
 "step 0"
 var list=[];
 var list2=[];
-for(var i=0;i<trigger.cards.length;i++){
-var card=trigger.cards[i];
+var cards=trigger.getd();
+for(var i=0;i<cards.length;i++){
+var card=cards[i];
 var suit=get.suit(card,(trigger.cards2&&trigger.cards2.contains(card))?trigger.player:false);
 list.add(suit);
 list2.add(suit);
 }
 game.getGlobalHistory('cardMove',function(evt){
-if(evt==trigger||(evt.name!='lose'&&evt.name!='cardsDiscard')) return false;
+if(evt==trigger||evt.getParent()==trigger||(evt.name!='lose'&&evt.name!='cardsDiscard')) return false;
 if(evt.name=='lose'&&evt.position!=ui.discardPile) return false;
 for(var i=0;i<evt.cards.length;i++){
 var card=evt.cards[i];
@@ -1702,7 +1719,7 @@ player.chooseTarget(get.prompt('mc_boss_xuanfen'),'弃置一名角色区域内�
 return target.countDiscardableCards(player,'hej')>0;
 }).set('ai',function(target){
 var player=_status.event.player;
-return get.effect(target,{name:'guohe'},player,player);
+return get.effect(target,{name:'guohe_copy'},player,player);
 });
 "step 2"
 if(result.bool){
@@ -1844,14 +1861,8 @@ if(card) cards.add(card);
 };
 if(cards.length>0) player.gain(cards,'gain2');
 "step 2"
-var evt=_status.event.getParent('phase');
-if(evt&&evt.player){
-game.resetSkills();
-_status.event=evt;
-_status.event.finish();
-_status.event.untrigger(true);
-};
-_status.event.getParent('phaseLoop').player=player.previous;
+var loop=_status.event.getParent('phaseLoop');
+if(loop.player!=player) _status.event.getParent('phaseLoop').player=player.previous;
 },
 },
 mc_yigui:{
@@ -2096,12 +2107,16 @@ infox:"锁定技，出牌阶段你可以多使用4张杀。",
 },
 mc_boss_danshu:{
 namex:"丹术",
-infox:"每当你于回合外失去牌时，你可以进行一次判定，若结果为红色，你回复1点体力",
-trigger:{player:'loseEnd'},
+infox:"每当你于回合外失去牌后，你可以进行一次判定，若结果为红色，你回复1点体力",
+trigger:{
+player:'loseAfter',
+global:['equipAfter','addJudgeAfter','gainAfter','loseAsyncAfter','addToExpansionAfter'],
+},
 frequent:true,
 unique:true,
 filter:function(event,player){
-return _status.currentPhase!=player&&player.hp<player.maxHp;
+var evt=event.getl(player);
+return evt&&evt.cards2&&evt.cards2.length>0&&_status.currentPhase!=player&&player.hp<player.maxHp;
 },
 content:function(){
 "step 0"
@@ -2127,6 +2142,9 @@ mc_boss_mojian:{
 namex:"魔箭",
 infox:"出牌阶段开始时你可以视为使用一张【万箭齐发】",
 trigger:{player:'phaseUseBegin'},
+filter:function(event,player){
+return player.hasUseTarget("wanjian");
+}, 
 content:function(){
 player.chooseUseTarget('wanjian',true,false);
 },
@@ -2135,6 +2153,9 @@ mc_boss_yushoua:{
 namex:"驭兽",
 infox:"出牌阶段开始时你可以视为使用一张【南蛮入侵】",
 trigger:{player:'phaseUseBegin'},
+filter:function(event,player){
+return player.hasUseTarget("nanman");
+},
 content:function(){
 player.chooseUseTarget('nanman',true,false);
 },
@@ -2145,7 +2166,7 @@ infox:"锁定技，你的手牌上限+4。",
 forced:true,
 mod:{
 maxHandcard:function (player,num){
-return num+=4;
+return num+4;
 },
 },
 },
@@ -5176,7 +5197,7 @@ Skills:{
 "mc_boss_mamian":["mc_boss_shouxin","mc_boss_guimian"],
 "mc_boss_luocha":["mc_boss_jianci","mc_boss_yaoxie","mc_boss_re_guimei"],
 "mc_boss_yecha":["mc_boss_yexi","mc_boss_xiefa","mc_boss_re_guimei"],
-"mc_boss_guibao":["drlt_poxi","drlt_jieying","repojun","mc_boss_yanwang","mc_boss_re_guimei"],
+"mc_boss_guibao":["drlt_poxi","drlt_jieying","repojun","mc_boss_yanwang","mc_boss_xuanfen","mc_boss_re_guimei"],
 "mc_boss_bakabaka":["mc_boss_weiwen","mc_boss_xianshuai","mc_boss_pozhen"],
 "mc_boss_testBoss1":["mc_boss_yaomei","mc_boss_liangjie"],
 },
@@ -5200,7 +5221,7 @@ Skills:{
 "old_caoren":['boss_jushou','boss_shoucheng','boss_jushi'],
 "old_zhoutai":["mc_boss_baizhan","mc_boss_fentiao"],
 "re_gongsunzan":["boss_zhangkong","boss_baima"],
-"xin_masu":["boss_xinzhan","boss_huilei","guzheng"],
+"xin_masu":["boss_xinzhan","boss_huilei","mc_boss_guzheng"],
 "ol_yujin":["boss_yizhong","boss_guijin"],
 "luxun":["boss_lianying"],
 "sp_zhangjiao":["boss_leiji","boss_guidao","boss_huangtian"],
@@ -5214,10 +5235,10 @@ name:"挑战八神",
 List:["zhugeliang","zhanghe","re_lusu","zhangliao","re_yuanshu","xunyu","liubei","diaochan"],
 hp:[5,5,5,5,5,5,5,5],
 Skills:{
-"zhugeliang":["mc_boss_guanxing","qinzheng"],
-"zhanghe":["mc_boss_qiaobian","pingkou"],
+"zhugeliang":["mc_boss_guanxing","mc_boss_qinzheng"],
+"zhanghe":["mc_boss_qiaobian","mc_boss_pingkou"],
 "re_lusu":["mc_boss_qianjin","mc_boss_dimeng"],
-"zhangliao":["mc_boss_tuxi","xianshuai"],
+"zhangliao":["mc_boss_tuxi","mc_boss_xianshuai"],
 "re_yuanshu":["mc_boss_wangzun","mc_boss_tongji"],
 "xunyu":["mc_boss_quhu","mc_boss_jieming","xinfu_pdgyingshi"],
 "liubei":["mc_boss_jiaren","weicheng","xiahui"],
@@ -5237,7 +5258,7 @@ List:[
 "mc_boss_mengtian"
 ],
 nohujia:true,
-hp:[12,8,7,9,10,1],
+hp:[12,8,7,9,9,1],
 Skills:{
 "gs_boss_nonameCharacter":["gs_boss_dayuan","gs_boss_ganhua","gs_boss_chuanjiao","gs_boss_fanji"],
 "mc_boss_kuafu":["mc_boss_zhuri","mc_boss_yinjiang","mc_boss_lieben","mc_boss_shenqu"],
@@ -5578,7 +5599,7 @@ if(ChList.contains(i)) _status.hh.addArray(ch[3]);
 };
 };
 var banned=[
-'xinfu_guhuo','reguhuo','jixi','duanchang','huashen','xinsheng','rexinsheng','rehuashen','jinqu','nzry_binglve','nzry_huaiju','nzry_yili','nzry_zhenglun','nzry_mingren','nzry_zhenliang','drlt_qingce','new_wuhun','kuangfeng','dawu','baonu','wumou','ol_wuqian','ol_shenfen','renjie','jilue','nzry_junlve','nzry_dinghuo','drlt_duorui','cunsi','huilei','paiyi','fuhun','zhuiyi','olddanshou','yanzhu','juexiang','jiexun','bizhuan','tongbo','xinfu_zhanji','xinfu_jijun','xinfu_fangtong','xinfu_qianchong','pdgyinshi','shuliang','zongkui','guju','bmcanshi','dingpan','xinfu_lingren','new_luoyan','junwei','gxlianhua','qizhou','fenyue','dianhu','linglong','fenxin','mouduan','cuorui','xinmanjuan','jianjie_faq','new_meibu','xinfu_xingzhao','jici','fenyong','xuehen','yingbin','midao','yishe','yinbing','juedi','bushi','xinfu_dianhua','xinfu_falu','xinfu_zhenyi','lskuizhu','xjshijian','fentian','zhiri','xindan','xinzhengnan','xinfu_xiaode','komari_xueshang','qiaosi_map',"yinka","zishu","luoshen","reluoshen",'cxliushi','zhanwan',"MC_kongshi","MC_tishen","MC_caihong","rende","youlong","huoxin","nsyice","wanggui","shiki_omusubi","chuanxin","kuangcai","xinfu_yanyu","xinfu_xushen","rexushen","decadexushen",'boss_juejing','xinlonghun','minishangshi','shangshi','reshangshi','pianchong',"fangzhu","spfuluan","zqingcheng","heji","spwuku","twlingbao","refuhan","binglun","gebo","xiusheng","yinlang","spsongshu","ejian","buqi","mibei","xinzifu","twyingjia","tongyuan","tuntian","oltuntian","retuntian","quanji","requanji","xinquanji","chuyuan","twfuhan","rekurou","zhuangdan","jiaozhao","huimin","lslixun",'yingba','scfuhai','pinghe','shuchen','wangjing','spfangzong','yaohu','xianzhu','jishi','binghuo','mjfubi','mjzuici','jishi','gongxiu','jutu','yaohu','yuanqing','xinmingshi','zaoli','xinghan','spfushi','xinzongzuo','xinfu_tunjun','olzaowang','dili','yuheng','spyingwu','yuzhang','twzhongchi','twyingjia','yjyibing','yjsancai','yjxiandao','shencai','huamu','qianmeng','liangyuan','dcxianzhu','dcchaixie','chuaili','buxu','xiyan','chuaili','olxushen','dcyishu','dcfengying','dclingfang','olximo','clanbeishi','xinzhanyi','retongbo','spxiaoni','sbtongye','sbjiewei','sbleiji','dcshouze','dctongguan','dcmengjie','dcqizi','dcshizhao','sbjizhu','sbleiji','chongzhen','sijun'
+'xinfu_guhuo','reguhuo','jixi','duanchang','huashen','xinsheng','rexinsheng','rehuashen','jinqu','nzry_binglve','nzry_huaiju','nzry_yili','nzry_zhenglun','nzry_mingren','nzry_zhenliang','drlt_qingce','new_wuhun','kuangfeng','dawu','baonu','wumou','ol_wuqian','ol_shenfen','renjie','jilue','nzry_junlve','nzry_dinghuo','drlt_duorui','cunsi','huilei','paiyi','fuhun','zhuiyi','olddanshou','yanzhu','juexiang','jiexun','bizhuan','tongbo','xinfu_zhanji','xinfu_jijun','xinfu_fangtong','xinfu_qianchong','pdgyinshi','shuliang','zongkui','guju','bmcanshi','dingpan','xinfu_lingren','new_luoyan','junwei','gxlianhua','qizhou','fenyue','dianhu','linglong','fenxin','mouduan','cuorui','xinmanjuan','jianjie_faq','new_meibu','xinfu_xingzhao','jici','fenyong','xuehen','yingbin','midao','yishe','yinbing','juedi','bushi','xinfu_dianhua','xinfu_falu','xinfu_zhenyi','lskuizhu','xjshijian','fentian','zhiri','xindan','xinzhengnan','xinfu_xiaode','komari_xueshang','qiaosi_map',"yinka","zishu","luoshen","reluoshen",'cxliushi','zhanwan',"MC_kongshi","MC_tishen","MC_caihong","rende","youlong","huoxin","nsyice","wanggui","shiki_omusubi","chuanxin","kuangcai","xinfu_yanyu","xinfu_xushen","rexushen","decadexushen",'boss_juejing','xinlonghun','minishangshi','shangshi','reshangshi','pianchong',"fangzhu","spfuluan","zqingcheng","heji","spwuku","twlingbao","refuhan","binglun","gebo","xiusheng","yinlang","spsongshu","ejian","buqi","mibei","xinzifu","twyingjia","tongyuan","tuntian","oltuntian","retuntian","quanji","requanji","xinquanji","chuyuan","twfuhan","rekurou","zhuangdan","jiaozhao","huimin","lslixun",'yingba','scfuhai','pinghe','shuchen','wangjing','spfangzong','yaohu','xianzhu','jishi','binghuo','mjfubi','mjzuici','jishi','gongxiu','jutu','yaohu','yuanqing','xinmingshi','zaoli','xinghan','spfushi','xinzongzuo','xinfu_tunjun','olzaowang','dili','yuheng','spyingwu','yuzhang','twzhongchi','twyingjia','yjyibing','yjsancai','yjxiandao','shencai','huamu','qianmeng','liangyuan','dcxianzhu','dcchaixie','chuaili','buxu','xiyan','chuaili','olxushen','dcyishu','dcfengying','dclingfang','olximo','clanbeishi','xinzhanyi','retongbo','spxiaoni','sbtongye','sbjiewei','sbleiji','dcshouze','dctongguan','dcmengjie','dcqizi','dcshizhao','sbjizhu','sbleiji','chongzhen','sijun','rejiaozhao'
 ];
 var add=["pozhu","qingjiao","quanfeng","lvli","tongqu","xinwanlan","juece","mouli","chuhai","shuishi","zhongzuo","rejianyan","mc_xifa","junkyuheng","junkshengzhi","junkquandao","junkchigang","olfeibai"];
 var list=[];
@@ -6139,12 +6160,12 @@ for(var i=0;i<game.dead.length;i++) list.push(game.dead[i]);
 for(var i=0;i<list.length;i++){
 if(list[i]==game.boss||list[i].boss2) continue;
 list[i].skillsT.add("mc_boss_qianxing");
-game.broadcastAll(function(player){
+game.broadcastAll(function(player,cards){
 if(player!=game.boss){
 player.revive(3,false);
+player.directgain(cards);
 };
-},list[i]);
-player.directgain(get.cards(3));
+},list[i],get.cards(3));
 };
 if(game.boss&&game.boss.name&&_status.hhList[game.boss.name]){
 game.broadcastAll(function(character,name){
